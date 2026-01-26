@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Resource, ResourceType, Booking } from '../types';
-import { getResources, createBooking, getBookings } from '../services/mockService';
-import { Monitor, Square, Search, X, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Lock } from 'lucide-react';
+import { Resource, ResourceType, Booking, Event } from '../types';
+import { getResources, createBooking, getBookings, getEvents, createResource, deleteResource } from '../services/mockService';
+import { Monitor, Square, Search, X, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Lock, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import ResourceTimeline from '../components/ResourceTimeline';
@@ -177,7 +177,18 @@ export default function Resources() {
 
     const [resources, setResources] = useState<Resource[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
+    const [events, setEvents] = useState<Event[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [newResource, setNewResource] = useState<Partial<Resource>>({
+        name: '',
+        type: ResourceType.ROOM,
+        capacity: 0,
+        isAvailable: true,
+        requiresApproval: true,
+        location: '',
+        description: ''
+    });
     const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -188,6 +199,7 @@ export default function Resources() {
 
     // Booking form state
     const [eventName, setEventName] = useState('');
+    const [selectedEventId, setSelectedEventId] = useState<string>('');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('10:00');
@@ -195,12 +207,14 @@ export default function Resources() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [resData, bookingsData] = await Promise.all([
+            const [resData, bookingsData, eventsData] = await Promise.all([
                 getResources(),
-                getBookings()
+                getBookings(),
+                getEvents()
             ]);
             setResources(resData);
             setBookings(bookingsData);
+            setEvents(eventsData);
         } catch (err) {
             console.error('Failed to fetch data:', err);
         }
@@ -218,6 +232,7 @@ export default function Resources() {
         setSelectedDate(new Date());
         setStartTime('09:00');
         setEndTime('10:00');
+        setSelectedEventId('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -240,14 +255,54 @@ export default function Resources() {
                 userId: user.id,
                 userName: user.name,
                 eventName,
+                eventId: selectedEventId || undefined,
                 startTime: `${dateStr}T${startTime}:00.000Z`,
                 endTime: `${dateStr}T${endTime}:00.000Z`,
             });
             setIsModalOpen(false);
             setEventName('');
+            setSelectedEventId('');
             fetchData();
         } catch (err: any) {
             setError(err.message || "Failed to book resource");
+        }
+    };
+
+    const handleAddResource = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || user.role !== 'ADMIN') return;
+
+        try {
+            await createResource(newResource);
+            setIsAddModalOpen(false);
+            setNewResource({
+                name: '',
+                type: ResourceType.ROOM,
+                capacity: 0,
+                isAvailable: true,
+                requiresApproval: true,
+                location: '',
+                description: ''
+            });
+            fetchData();
+        } catch (err: any) {
+            console.error(err);
+            alert("Failed to create resource");
+        }
+    };
+
+    const handleDeleteResource = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user || user.role !== 'ADMIN') return;
+
+        if (window.confirm('Are you sure you want to delete this resource?')) {
+            try {
+                await deleteResource(id);
+                fetchData();
+            } catch (err) {
+                console.error(err);
+                alert("Failed to delete resource");
+            }
         }
     };
 
@@ -329,6 +384,15 @@ export default function Resources() {
             {/* Filters */}
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                 <div className="flex flex-wrap gap-2">
+                    {user?.role === 'ADMIN' && (
+                        <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="px-4 py-2 rounded-xl text-sm font-medium bg-primary-600 text-white shadow-lg shadow-primary-500/25 flex items-center gap-2 hover:bg-primary-700 transition-all"
+                        >
+                            <Plus size={16} />
+                            Add Resource
+                        </button>
+                    )}
                     {['all', 'rooms', 'labs', 'equipment', 'vehicles'].map((cat) => (
                         <button
                             key={cat}
@@ -427,10 +491,21 @@ export default function Resources() {
                                         <div className={`p-3 rounded-xl ${resource.type === ResourceType.ROOM || resource.type === ResourceType.HALL ? 'bg-indigo-50 text-indigo-600' : resource.type === ResourceType.LAB ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'}`}>
                                             {resource.type === ResourceType.ROOM || resource.type === ResourceType.HALL ? <Square size={24} /> : <Monitor size={24} />}
                                         </div>
-                                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${resource.isAvailable ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                                            }`}>
-                                            {resource.isAvailable ? 'Available' : 'Unavailable'}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${resource.isAvailable ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                                }`}>
+                                                {resource.isAvailable ? 'Available' : 'Unavailable'}
+                                            </span>
+                                            {user?.role === 'ADMIN' && (
+                                                <button
+                                                    onClick={(e) => handleDeleteResource(resource.id, e)}
+                                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Delete Resource"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <h3 className="font-bold text-surface-900 mb-1">{resource.name}</h3>
                                     {resource.capacity && (
@@ -461,6 +536,15 @@ export default function Resources() {
                                         }`}>
                                         {resource.isAvailable ? 'Available' : 'Unavailable'}
                                     </span>
+                                    {user?.role === 'ADMIN' && (
+                                        <button
+                                            onClick={(e) => handleDeleteResource(resource.id, e)}
+                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Delete Resource"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                     {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
                                         <button
                                             onClick={() => handleBookClick(resource)}
@@ -535,14 +619,28 @@ export default function Resources() {
                                     {/* Right: Event details and time */}
                                     <div className="space-y-5">
                                         <div>
-                                            <label className="block text-sm font-medium text-surface-700 mb-2">Event Name</label>
+                                            <label className="block text-sm font-medium text-surface-700 mb-2">Parent Event (Optional)</label>
+                                            <select
+                                                value={selectedEventId}
+                                                onChange={(e) => setSelectedEventId(e.target.value)}
+                                                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 mb-4"
+                                            >
+                                                <option value="">-- No Parent Event --</option>
+                                                {events.map(event => (
+                                                    <option key={event.id} value={event.id}>
+                                                        {event.title}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                            <label className="block text-sm font-medium text-surface-700 mb-2">Booking Title / Sub-event</label>
                                             <input
                                                 type="text"
                                                 required
                                                 value={eventName}
                                                 onChange={(e) => setEventName(e.target.value)}
                                                 className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10"
-                                                placeholder="What's this booking for?"
+                                                placeholder="e.g. Workshop Session 1"
                                             />
                                         </div>
 
@@ -572,6 +670,122 @@ export default function Resources() {
                                             {user?.role === 'ADMIN' ? 'Book Resource' : 'Request Resource'}
                                         </button>
                                     </div>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Add Resource Modal */}
+            <AnimatePresence>
+                {isAddModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsAddModalOpen(false)}
+                            className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+                        >
+                            <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-surface-900">Add New Resource</h3>
+                                <button onClick={() => setIsAddModalOpen(false)} className="p-2 text-surface-400 hover:text-surface-600 rounded-lg hover:bg-surface-100">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleAddResource} className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-surface-700 mb-1">Name</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={newResource.name}
+                                        onChange={e => setNewResource({ ...newResource, name: e.target.value })}
+                                        className="w-full px-4 py-2 rounded-xl border border-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-surface-700 mb-1">Type</label>
+                                        <select
+                                            value={newResource.type}
+                                            onChange={e => setNewResource({ ...newResource, type: e.target.value as ResourceType })}
+                                            className="w-full px-4 py-2 rounded-xl border border-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                                        >
+                                            {Object.values(ResourceType).map(t => (
+                                                <option key={t} value={t}>{t}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-surface-700 mb-1">Capacity</label>
+                                        <input
+                                            type="number"
+                                            value={newResource.capacity}
+                                            onChange={e => setNewResource({ ...newResource, capacity: parseInt(e.target.value) || 0 })}
+                                            className="w-full px-4 py-2 rounded-xl border border-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-surface-700 mb-1">Location</label>
+                                    <input
+                                        type="text"
+                                        value={newResource.location || ''}
+                                        onChange={e => setNewResource({ ...newResource, location: e.target.value })}
+                                        className="w-full px-4 py-2 rounded-xl border border-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-surface-700 mb-1">Description</label>
+                                    <textarea
+                                        value={newResource.description || ''}
+                                        onChange={e => setNewResource({ ...newResource, description: e.target.value })}
+                                        className="w-full px-4 py-2 rounded-xl border border-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                                        rows={3}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="flex items-center gap-2 text-sm text-surface-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={newResource.isAvailable}
+                                            onChange={e => setNewResource({ ...newResource, isAvailable: e.target.checked })}
+                                            className="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        Available
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-surface-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={newResource.requiresApproval}
+                                            onChange={e => setNewResource({ ...newResource, requiresApproval: e.target.checked })}
+                                            className="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        Requires Approval
+                                    </label>
+                                </div>
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddModalOpen(false)}
+                                        className="px-4 py-2 text-sm font-medium text-surface-600 hover:bg-surface-100 rounded-xl"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-lg shadow-primary-500/25"
+                                    >
+                                        Create Resource
+                                    </button>
                                 </div>
                             </form>
                         </motion.div>
