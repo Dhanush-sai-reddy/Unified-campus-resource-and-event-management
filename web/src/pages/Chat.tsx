@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import { Send, Hash, Users, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
+import { api } from '../services/api';
 
 const SOCKET_URL = API_BASE_URL.replace('/api', '');
 
@@ -87,6 +88,13 @@ export default function Chat() {
         if (socketRef.current) {
             socketRef.current.emit('join_room', currentRoom);
             setMessages([]); // Clear messages when switching rooms
+
+            // Fetch history
+            api.getChatHistory(currentRoom)
+                .then(history => {
+                    setMessages(history);
+                })
+                .catch(err => console.error("Failed to load chat history", err));
         }
     }, [currentRoom]);
 
@@ -128,8 +136,8 @@ export default function Chat() {
                             key={room.id}
                             onClick={() => setCurrentRoom(room.id)}
                             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${currentRoom === room.id
-                                    ? 'bg-primary-100 text-primary-700 font-medium'
-                                    : 'text-surface-600 hover:bg-surface-100'
+                                ? 'bg-primary-100 text-primary-700 font-medium'
+                                : 'text-surface-600 hover:bg-surface-100'
                                 }`}
                         >
                             <span className="text-lg">{room.icon}</span>
@@ -190,8 +198,8 @@ export default function Chat() {
                         return (
                             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${isMe
-                                        ? 'bg-primary-600 text-white rounded-br-sm'
-                                        : 'bg-white text-surface-900 rounded-bl-sm border border-surface-100'
+                                    ? 'bg-primary-600 text-white rounded-br-sm'
+                                    : 'bg-white text-surface-900 rounded-bl-sm border border-surface-100'
                                     }`}>
                                     {!isMe && (
                                         <p className="text-xs font-semibold mb-1 text-primary-600">{msg.sender}</p>

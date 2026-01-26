@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Event } from '../types';
-import { getMyEvents } from '../services/mockService';
+import { Event, Booking } from '../types';
+import { api } from '../services/api';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Clock, MapPin, X, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MapPin, X, Calendar as CalendarIcon, Server, Users } from 'lucide-react';
 
 interface CalendarEvent {
     id: string;
@@ -27,22 +27,45 @@ const COLORS = [
 
 export default function Calendar() {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [viewMode, setViewMode] = useState<'events' | 'resources'>('events');
+
+    // Data state
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [dbEvents, setDbEvents] = useState<Event[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [eventBookings, setEventBookings] = useState<Booking[]>([]); // For details modal
 
     const [draggingEvent, setDraggingEvent] = useState<string | null>(null);
     const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom' } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [newEvent, setNewEvent] = useState({ title: '', day: 0, startHour: 9, endHour: 10, location: '' });
+    const [newEvent, setNewEvent] = useState({
+        title: '',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+        startHour: 9,
+        endHour: 10,
+        location: '',
+        description: ''
+    });
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
     const calendarRef = useRef<HTMLDivElement>(null);
 
     // Initial fetch
     useEffect(() => {
-        getMyEvents().then(data => {
-            setDbEvents(data);
-        });
+        const fetchData = async () => {
+            try {
+                const [fetchedEvents, fetchedBookings] = await Promise.all([
+                    api.getEvents(),
+                    api.getBookings({ upcoming: false }) // Fetch all for calendar
+                ]);
+                setDbEvents(fetchedEvents);
+                setBookings(fetchedBookings);
+            } catch (error) {
+                console.error("Failed to fetch calendar data", error);
+            }
+        };
+        fetchData();
     }, []);
 
     // Get week dates
@@ -60,34 +83,64 @@ export default function Calendar() {
 
     // Update events when week changes or data loads
     useEffect(() => {
-        if (dbEvents.length === 0) return;
-
         const startOfWeek = weekDates[0];
         startOfWeek.setHours(0, 0, 0, 0);
 
         const endOfWeek = new Date(weekDates[6]);
         endOfWeek.setHours(23, 59, 59, 999);
 
-        const currentWeekEvents = dbEvents.filter(e => {
-            const d = new Date(e.date);
-            return d >= startOfWeek && d <= endOfWeek;
-        });
+        let mapped: CalendarEvent[] = [];
 
-        const mapped: CalendarEvent[] = currentWeekEvents.map(e => {
-            const d = new Date(e.date);
-            return {
-                id: e.id,
-                title: e.title,
-                startHour: d.getHours(),
-                endHour: d.getHours() + 2, // Default duration if not specified
-                day: d.getDay(),
-                color: 'bg-indigo-500',
-                location: e.location
-            };
-        });
+        if (viewMode === 'events') {
+            if (dbEvents.length === 0) return;
+
+            const currentWeekEvents = dbEvents.filter(e => {
+                const d = new Date(e.date);
+                return d >= startOfWeek && d <= endOfWeek;
+            });
+
+            mapped = currentWeekEvents.map(e => {
+                const d = new Date(e.date);
+                // Simple hash for color
+                const colorIdx = e.id.charCodeAt(0) % COLORS.length;
+
+                return {
+                    id: e.id,
+                    title: e.title,
+                    startHour: d.getHours(),
+                    endHour: d.getHours() + 2, // Default duration if not specified or calculate from endDate
+                    day: d.getDay(),
+                    color: COLORS[colorIdx],
+                    location: e.location
+                };
+            });
+        } else {
+            // Resource View
+            if (bookings.length === 0) return;
+
+            const currentWeekBookings = bookings.filter(b => {
+                const d = new Date(b.startTime);
+                return d >= startOfWeek && d <= endOfWeek && b.status === 'APPROVED';
+            });
+
+            mapped = currentWeekBookings.map(b => {
+                const start = new Date(b.startTime);
+                const end = new Date(b.endTime);
+
+                return {
+                    id: b.id,
+                    title: `${b.resource?.name || 'Resource'}: ${b.title}`,
+                    startHour: start.getHours(),
+                    endHour: end.getHours() || 24,
+                    day: start.getDay(),
+                    color: 'bg-slate-600',
+                    location: b.resource?.name
+                };
+            });
+        }
 
         setEvents(mapped);
-    }, [dbEvents, currentDate]);
+    }, [dbEvents, bookings, currentDate, viewMode]);
 
     const navigateWeek = (direction: number) => {
         const newDate = new Date(currentDate);
@@ -149,24 +202,66 @@ export default function Calendar() {
 
     // Create new event
     const handleCellClick = (day: number, hour: number) => {
-        setNewEvent({ title: '', day, startHour: hour, endHour: hour + 1, location: '' });
+        const clickedDate = weekDates[day];
+        const dateStr = clickedDate.toISOString().split('T')[0];
+
+        setNewEvent({
+            title: '',
+            startDate: dateStr,
+            endDate: dateStr,
+            startHour: hour,
+            endHour: hour + 1,
+            location: '',
+            description: ''
+        });
         setIsModalOpen(true);
     };
 
-    const handleCreateEvent = () => {
+    const handleCreateEvent = async () => {
         if (!newEvent.title) return;
-        const event: CalendarEvent = {
-            id: Date.now().toString(),
-            title: newEvent.title,
-            day: newEvent.day,
-            startHour: newEvent.startHour,
-            endHour: newEvent.endHour,
-            location: newEvent.location,
-            color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        };
-        setEvents([...events, event]);
-        setIsModalOpen(false);
-        setNewEvent({ title: '', day: 0, startHour: 9, endHour: 10, location: '' });
+
+        try {
+            const start = new Date(newEvent.startDate);
+            start.setHours(newEvent.startHour);
+
+            const end = new Date(newEvent.endDate);
+            end.setHours(newEvent.endHour);
+
+            // Check if multi-day
+            const isMultiDay = newEvent.startDate !== newEvent.endDate;
+
+            await api.createEvent({
+                title: newEvent.title,
+                description: newEvent.description,
+                date: start.toISOString(),
+                endDate: end.toISOString(),
+                location: newEvent.location,
+                budget: 0,
+                isMultiDay: isMultiDay as any
+            });
+
+            // Refresh events
+            const [fetchedEvents, fetchedBookings] = await Promise.all([
+                api.getEvents(),
+                api.getBookings({ upcoming: false })
+            ]);
+            setDbEvents(fetchedEvents);
+            setBookings(fetchedBookings);
+
+            setIsModalOpen(false);
+            setNewEvent({
+                title: '',
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: new Date().toISOString().split('T')[0],
+                startHour: 9,
+                endHour: 10,
+                location: '',
+                description: ''
+            });
+        } catch (error) {
+            console.error("Failed to create event", error);
+            alert("Failed to create event");
+        }
     };
 
     const handleDeleteEvent = (id: string) => {
@@ -192,6 +287,30 @@ export default function Calendar() {
                     <p className="text-surface-500 mt-1">Plan and manage your campus events</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    {/* View Toggle */}
+                    <div className="flex bg-surface-100 p-1 rounded-xl">
+                        <button
+                            onClick={() => setViewMode('events')}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${viewMode === 'events' ? 'bg-white shadow text-primary-600' : 'text-surface-600 hover:text-surface-900'
+                                }`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <Users size={16} />
+                                Events
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('resources')}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${viewMode === 'resources' ? 'bg-white shadow text-primary-600' : 'text-surface-600 hover:text-surface-900'
+                                }`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <Server size={16} />
+                                Resources
+                            </span>
+                        </button>
+                    </div>
+
                     <button
                         onClick={goToToday}
                         className="px-4 py-2 text-sm font-medium text-surface-700 bg-white border border-surface-200 rounded-xl hover:bg-surface-50 transition-colors"
@@ -262,7 +381,17 @@ export default function Calendar() {
                             <motion.div
                                 key={event.id}
                                 layoutId={event.id}
-                                onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedEvent(event);
+                                    // Filter bookings for this event if in event mode
+                                    if (viewMode === 'events') {
+                                        const relatedBookings = bookings.filter(b => b.eventId === event.id);
+                                        setEventBookings(relatedBookings);
+                                    } else {
+                                        setEventBookings([]);
+                                    }
+                                }}
                                 className={`absolute rounded-lg ${event.color} text-white text-sm p-2 cursor-move overflow-hidden shadow-lg hover:shadow-xl transition-shadow ${draggingEvent === event.id || resizingEvent?.id === event.id ? 'opacity-80 z-20' : 'z-10'
                                     }`}
                                 style={{
@@ -344,6 +473,27 @@ export default function Calendar() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
+                                    <label className="block text-sm font-medium text-surface-700 mb-1">Start Date</label>
+                                    <input
+                                        type="date"
+                                        value={newEvent.startDate}
+                                        onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-surface-700 mb-1">End Date</label>
+                                    <input
+                                        type="date"
+                                        value={newEvent.endDate}
+                                        min={newEvent.startDate}
+                                        onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
                                     <label className="block text-sm font-medium text-surface-700 mb-1">Start Time</label>
                                     <select
                                         value={newEvent.startHour}
@@ -362,7 +512,7 @@ export default function Calendar() {
                                         onChange={(e) => setNewEvent({ ...newEvent, endHour: Number(e.target.value) })}
                                         className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                                     >
-                                        {HOURS.filter(h => h > newEvent.startHour).map(h => (
+                                        {HOURS.map(h => (
                                             <option key={h} value={h}>{h > 12 ? h - 12 : h}:00 {h >= 12 ? 'PM' : 'AM'}</option>
                                         ))}
                                     </select>
@@ -420,6 +570,25 @@ export default function Calendar() {
                                     <span>{selectedEvent.location}</span>
                                 </div>
                             )}
+
+                            {/* Resource Bookings / Sub-events */}
+                            {viewMode === 'events' && eventBookings.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-surface-100">
+                                    <h4 className="text-xs font-semibold text-surface-500 uppercase mb-2">Resource Allocations</h4>
+                                    <div className="space-y-2">
+                                        {eventBookings.map(b => (
+                                            <div key={b.id} className="text-xs bg-surface-50 p-2 rounded-lg border border-surface-200">
+                                                <div className="flex justify-between font-medium text-surface-900">
+                                                    <span>{b.resource?.name}</span>
+                                                    <span>{new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                                <div className="text-surface-500 mt-0.5">{b.purpose}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <button
                                 onClick={() => handleDeleteEvent(selectedEvent.id)}
                                 className="w-full mt-4 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"

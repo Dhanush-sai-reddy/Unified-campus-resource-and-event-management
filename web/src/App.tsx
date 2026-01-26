@@ -48,7 +48,6 @@ function AppRoutes() {
                 <Route path="resources" element={<Resources />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="clubs" element={<Clubs />} />
-                <Route path="clubs" element={<Clubs />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="chat" element={<Chat />} />

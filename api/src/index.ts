@@ -32,6 +32,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/chat', require('./routes/chat').default);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error(err.stack);
@@ -54,8 +55,49 @@ io.on('connection', (socket) => {
         console.log(`User ${socket.id} joined room ${room}`);
     });
 
-    socket.on('send_message', (data) => {
-        io.to(data.room).emit('receive_message', data);
+    socket.on('send_message', async (data) => {
+        try {
+            // Save to DB if sender is a valid user
+            // We assume data has sender (name) but for DB we need senderId. 
+            // Ideally frontend sends senderId or we decode token. 
+            // For hackathon speed, let's lookup user by name (risky but matches current frontend) 
+            // OR better: update frontend to send senderId.
+            // Let's rely on looking up user by name for now since we don't have auth middleware on socket here yet.
+
+            // Actually, let's just use Prisma directly.
+            const { PrismaClient } = require('@prisma/client');
+            const prisma = new PrismaClient();
+
+            const user = await prisma.user.findFirst({ where: { name: data.sender } });
+
+            if (user) {
+                const message = await prisma.message.create({
+                    data: {
+                        text: data.text,
+                        senderId: user.id,
+                        roomId: data.room,
+                        createdAt: new Date(data.timestamp || Date.now())
+                    },
+                    include: { sender: { select: { name: true } } }
+                });
+
+                // data.id is usually temp from frontend, use real DB id
+                const payload = {
+                    ...data,
+                    id: message.id,
+                    timestamp: message.createdAt.getTime()
+                };
+
+                io.to(data.room).emit('receive_message', payload);
+            } else {
+                // Fallback for non-persisted user (shouldn't happen in auth app)
+                io.to(data.room).emit('receive_message', data);
+            }
+        } catch (e) {
+            console.error("Error saving message:", e);
+            // Emit anyway so UX isn't broken
+            io.to(data.room).emit('receive_message', data);
+        }
     });
 
     socket.on('disconnect', () => {

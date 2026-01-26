@@ -32,6 +32,8 @@ export interface Event {
   organizerName: string;
   clubName: string;
   date: string;
+  endDate?: string;
+  isMultiDay?: boolean;
   location: string;
   status: EventStatus;
   participants: number;
