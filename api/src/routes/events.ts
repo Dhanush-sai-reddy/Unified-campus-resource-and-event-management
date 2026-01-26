@@ -7,6 +7,30 @@ import { createNotification } from './notifications';
 const router = Router();
 const prisma = new PrismaClient();
 
+// Get my registered events
+router.get('/my/registered', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const registrations = await prisma.eventRegistration.findMany({
+            where: { userId: req.userId },
+            include: {
+                event: {
+                    include: {
+                        organizer: { select: { id: true, name: true, avatar: true } },
+                        club: { select: { id: true, name: true } },
+                        _count: { select: { registrations: true } },
+                    }
+                }
+            },
+            orderBy: { event: { date: 'asc' } }
+        });
+
+        const events = registrations.map(r => r.event);
+        res.json(events);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch my events' });
+    }
+});
+
 // Get all events
 router.get('/', async (req, res) => {
     try {
@@ -81,6 +105,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
         // Audit log
         await auditLog('event_created', { eventId: event.id, title, userId: req.userId });
+
+        // Kafka
+        const { publishEvent } = require('../services/producer');
+        publishEvent(event).catch(console.error);
 
         res.status(201).json(event);
     } catch (error) {

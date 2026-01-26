@@ -12,6 +12,7 @@ import {
     LogOut,
     ChevronLeft,
     Menu,
+    MessageCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +28,9 @@ const navItems: NavItem[] = [
     { label: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
     { label: 'Events', path: '/events', icon: <Calendar size={20} /> },
     { label: 'Calendar', path: '/calendar', icon: <CalendarDays size={20} /> },
+    { label: 'Events', path: '/events', icon: <Calendar size={20} /> },
+    { label: 'Calendar', path: '/calendar', icon: <CalendarDays size={20} /> },
+    { label: 'Chat', path: '/chat', icon: <MessageCircle size={20} /> },
     { label: 'Resources', path: '/resources', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.ORGANIZER] },
     { label: 'Clubs', path: '/clubs', icon: <Users size={20} /> },
     { label: 'Profile', path: '/profile', icon: <User size={20} /> },

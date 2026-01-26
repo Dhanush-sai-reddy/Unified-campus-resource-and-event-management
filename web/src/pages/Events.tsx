@@ -94,8 +94,7 @@ export default function Events() {
         setSelectedEvent(event);
         setLoadingResources(true);
         try {
-            // Fetch all bookings and filter by event ID
-            // In a real API, we would call getBookings(undefined, event.id)
+
             const allBookings = await getBookings();
             const relevant = allBookings.filter(b => (b as any).eventName === event.title || b.title === event.title || b.eventId === event.id); // Check variations for mock data compatibility
             setEventBookings(relevant);
@@ -291,7 +290,8 @@ export default function Events() {
                                                             <Calendar size={16} />
                                                         </div>
                                                         <div>
-                                                            <p className="font-medium text-surface-900 text-sm">{booking.resource?.name || booking.resourceId}</p>
+                                                            <p className="font-medium text-surface-900 text-sm">{booking.title}</p>
+                                                            <p className="text-xs text-primary-600 font-medium mb-0.5">at {booking.resource?.name || booking.resourceId}</p>
                                                             <p className="text-xs text-surface-500">
                                                                 {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </p>

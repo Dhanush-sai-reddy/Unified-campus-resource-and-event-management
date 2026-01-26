@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -11,6 +12,9 @@ import (
 
 	"campus-scheduler/db"
 	"campus-scheduler/handlers"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/segmentio/kafka-go"
 )
 
 func main() {
@@ -58,21 +62,100 @@ func main() {
 	bookings.Post("/", handlers.CreateBooking)
 	bookings.Put("/:id/status", handlers.UpdateBookingStatus)
 	bookings.Delete("/:id", handlers.CancelBooking)
-	bookings.Get("/conflicts", handlers.CheckConflicts)
 
-	// Analytics
-	analytics := api.Group("/analytics")
-	analytics.Get("/overview", handlers.GetOverview)
-	analytics.Get("/resource-usage", handlers.GetResourceUsage)
-	analytics.Get("/event-trends", handlers.GetEventTrends)
-	analytics.Get("/export/csv", handlers.ExportCSV)
+	// Start Consumers in background
+	go startRabbitConsumer()
+	go startKafkaConsumer()
 
-	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "5001"
+		port = "3002" // Changed default to 3002 to match Dockerfile
 	}
 
-	log.Printf("🚀 Campus Scheduler running on port %s", port)
-	log.Fatal(app.Listen(":" + port))
+	log.Printf("Scheduler running on port %s", port)
+	app.Listen(":" + port)
+}
+
+func startRabbitConsumer() {
+	url := os.Getenv("RABBITMQ_URL")
+	if url == "" {
+		url = "amqp://guest:guest@localhost:5672"
+	}
+
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		log.Printf("Failed to connect to RabbitMQ: %s", err)
+		return
+	}
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Printf("Failed to open a channel: %s", err)
+		return
+	}
+	defer ch.Close()
+
+	q, err := ch.QueueDeclare(
+		"announcements", // name
+		true,            // durable
+		false,           // delete when unused
+		false,           // exclusive
+		false,           // no-wait
+		nil,             // arguments
+	)
+	if err != nil {
+		log.Printf("Failed to declare a queue: %s", err)
+		return
+	}
+
+	msgs, err := ch.Consume(
+		q.Name, // queue
+		"",     // consumer
+		true,   // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
+	)
+	if err != nil {
+		log.Printf("Failed to register a consumer: %s", err)
+		return
+	}
+
+	log.Println(" [*] Waiting for announcements. To exit press CTRL+C")
+
+	for d := range msgs {
+		log.Printf(" [x] Received Announcement: %s", d.Body)
+	}
+}
+
+func startKafkaConsumer() {
+	broker := os.Getenv("KAFKA_BROKER")
+	if broker == "" {
+		broker = "localhost:9092"
+	}
+
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  []string{broker},
+		Topic:    "events",
+		GroupID:  "scheduler-group",
+		MinBytes: 10e3, // 10KB
+		MaxBytes: 10e6, // 10MB
+	})
+
+	log.Println(" [*] Waiting for events from Kafka")
+
+	for {
+		m, err := r.ReadMessage(context.Background())
+		if err != nil {
+			log.Printf("Kafka Read error: %v", err)
+			break
+		}
+		log.Printf(" [K] Received Event: %s", string(m.Value))
+	}
+
+	if err := r.Close(); err != nil {
+		log.Fatal("failed to close reader:", err)
+	}
 }

@@ -101,7 +101,7 @@ export async function getCommitHistory(limit: number = 50): Promise<any[]> {
         }
 
         const log = await git?.log({ maxCount: limit });
-        return log?.all || [];
+        return [...(log?.all || [])];
     } catch (error) {
         console.error('Failed to get commit history:', error);
         return [];

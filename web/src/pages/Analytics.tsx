@@ -1,6 +1,8 @@
-import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Users, Calendar, Building2, DollarSign, Download, Filter } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BarChart3, TrendingUp, Users, Calendar, Building2, DollarSign, Download, Filter, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { useState } from 'react';
+import { exportEventsCSV, exportUsersCSV, exportBookingsCSV, exportClubsCSV } from '../services/mockService';
 
 const eventData = [
     { month: 'Sep', events: 12 },
@@ -63,6 +65,8 @@ function StatCard({ title, value, change, icon, color }: StatCardProps) {
 }
 
 export default function Analytics() {
+    const [showExportMenu, setShowExportMenu] = useState(false);
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -76,10 +80,46 @@ export default function Analytics() {
                         <Filter size={18} />
                         Filters
                     </button>
-                    <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/25">
-                        <Download size={18} />
-                        Export
-                    </button>
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowExportMenu(!showExportMenu)}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/25"
+                        >
+                            <Download size={18} />
+                            Export
+                            <ChevronDown size={16} />
+                        </button>
+
+                        <AnimatePresence>
+                            {showExportMenu && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-surface-100 overflow-hidden z-20 origin-top-right"
+                                >
+                                    <div className="p-1">
+                                        <button onClick={() => { exportEventsCSV(); setShowExportMenu(false); }} className="flex items-center gap-3 w-full px-3 py-2 text-sm text-surface-700 hover:bg-surface-50 rounded-lg transition-colors">
+                                            <FileSpreadsheet size={16} className="text-green-600" />
+                                            Export Events
+                                        </button>
+                                        <button onClick={() => { exportBookingsCSV(); setShowExportMenu(false); }} className="flex items-center gap-3 w-full px-3 py-2 text-sm text-surface-700 hover:bg-surface-50 rounded-lg transition-colors">
+                                            <FileSpreadsheet size={16} className="text-blue-600" />
+                                            Export Bookings
+                                        </button>
+                                        <button onClick={() => { exportUsersCSV(); setShowExportMenu(false); }} className="flex items-center gap-3 w-full px-3 py-2 text-sm text-surface-700 hover:bg-surface-50 rounded-lg transition-colors">
+                                            <FileSpreadsheet size={16} className="text-orange-600" />
+                                            Export Users
+                                        </button>
+                                        <button onClick={() => { exportClubsCSV(); setShowExportMenu(false); }} className="flex items-center gap-3 w-full px-3 py-2 text-sm text-surface-700 hover:bg-surface-50 rounded-lg transition-colors">
+                                            <FileSpreadsheet size={16} className="text-purple-600" />
+                                            Export Clubs
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             </div>
 

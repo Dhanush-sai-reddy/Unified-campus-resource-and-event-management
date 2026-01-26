@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth';
+import { publishAnnouncement } from '../services/producer';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -126,8 +127,14 @@ router.post('/announce', authenticateToken, requireRole('ADMIN'), async (req: Au
             })),
         });
 
+
+
+        // RabbitMQ
+        publishAnnouncement(`ANNOUNCEMENT: ${title} - ${message}`).catch(console.error);
+
         res.json({ sent: notifications.count });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Failed to send announcement' });
     }
 });

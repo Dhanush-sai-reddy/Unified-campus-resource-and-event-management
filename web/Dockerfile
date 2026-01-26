@@ -33,6 +33,13 @@ RUN echo 'server { \
     proxy_set_header Connection "upgrade"; \
     proxy_set_header Host $host; \
     } \
+    location /socket.io/ { \
+    proxy_pass http://campus-api:5000/socket.io/; \
+    proxy_http_version 1.1; \
+    proxy_set_header Upgrade $http_upgrade; \
+    proxy_set_header Connection "upgrade"; \
+    proxy_set_header Host $host; \
+    } \
     location /scheduler/ { \
     proxy_pass http://campus-scheduler:5001/api/; \
     proxy_http_version 1.1; \
