@@ -131,11 +131,11 @@ const ResourceList: React.FC<ResourceListProps> = ({ currentUser }) => {
                 <div className={`p-3 rounded-xl ${resource.type === ResourceType.ROOM ? 'bg-indigo-50 text-indigo-600' : 'bg-orange-50 text-orange-600'}`}>
                   {resource.type === ResourceType.ROOM ? <Square size={24} /> : <Monitor size={24} />}
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${resource.status === 'AVAILABLE'
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${resource.isAvailable
                   ? 'bg-green-50 text-green-700 border border-green-200/50'
                   : 'bg-surface-100 text-surface-600 border border-surface-200'
                   }`}>
-                  {resource.status}
+                  {resource.isAvailable ? 'Available' : 'Unavailable'}
                 </span>
               </div>
 
@@ -159,11 +159,11 @@ const ResourceList: React.FC<ResourceListProps> = ({ currentUser }) => {
 
                 <button
                   onClick={() => handleBookClick(resource)}
-                  disabled={resource.status !== 'AVAILABLE'}
+                  disabled={!resource.isAvailable}
                   className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all shadow-sm focus:ring-4 focus:ring-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed
                     bg-surface-900 text-white hover:bg-surface-800 disabled:bg-surface-200 disabled:text-surface-400"
                 >
-                  {resource.status === 'AVAILABLE' ? 'Book Now' : 'Unavailable'}
+                  {resource.isAvailable ? 'Book Now' : 'Unavailable'}
                 </button>
               </div>
             </motion.div>

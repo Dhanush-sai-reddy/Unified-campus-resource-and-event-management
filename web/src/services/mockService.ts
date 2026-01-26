@@ -1,5 +1,5 @@
 import { User, Event, Resource, Booking, EventStatus } from '../types';
-import { API_BASE_URL, SCHEDULER_BASE_URL } from '../config';
+import { API_BASE_URL } from '../config';
 
 // Helper for API calls
 const apiCall = async (url: string, options: RequestInit = {}) => {
