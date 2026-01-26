@@ -48,6 +48,19 @@ export const getEvents = async (): Promise<Event[]> => {
   return await apiCall(`${API_BASE_URL}/events`);
 };
 
+export const getMyEvents = async (): Promise<Event[]> => {
+  // Mocking my events for now until backend endpoint is ready
+  // In a real app, this would be: return await apiCall(`${API_BASE_URL}/events/my`);
+  try {
+    const allEvents = await getEvents();
+    // Return all events as "my events" for demonstration purposes
+    return allEvents;
+  } catch (error) {
+    console.warn("Failed to fetch real events, falling back to mock", error);
+    return [];
+  }
+};
+
 export const createEvent = async (eventData: Partial<Event>): Promise<Event> => {
   return await apiCall(`${API_BASE_URL}/events`, {
     method: 'POST',

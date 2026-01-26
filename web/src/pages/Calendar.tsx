@@ -1,4 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { Event } from '../types';
+import { getMyEvents } from '../services/mockService';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Clock, MapPin, X, Calendar as CalendarIcon } from 'lucide-react';
 
@@ -25,13 +27,8 @@ const COLORS = [
 
 export default function Calendar() {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [events, setEvents] = useState<CalendarEvent[]>([
-        { id: '1', title: 'Team Meeting', startHour: 9, endHour: 11, day: 1, color: 'bg-blue-500', location: 'Room 101' },
-        { id: '2', title: 'Workshop', startHour: 14, endHour: 16, day: 2, color: 'bg-purple-500', location: 'Auditorium A' },
-        { id: '3', title: 'Hackathon Planning', startHour: 10, endHour: 13, day: 3, color: 'bg-green-500', location: 'Lab 3' },
-        { id: '4', title: 'Club Meeting', startHour: 15, endHour: 17, day: 4, color: 'bg-orange-500', location: 'Conference Room' },
-        { id: '5', title: 'Tech Talk', startHour: 11, endHour: 12, day: 5, color: 'bg-pink-500', location: 'Hall B' },
-    ]);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [dbEvents, setDbEvents] = useState<Event[]>([]);
 
     const [draggingEvent, setDraggingEvent] = useState<string | null>(null);
     const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom' } | null>(null);
@@ -40,6 +37,13 @@ export default function Calendar() {
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
     const calendarRef = useRef<HTMLDivElement>(null);
+
+    // Initial fetch
+    useEffect(() => {
+        getMyEvents().then(data => {
+            setDbEvents(data);
+        });
+    }, []);
 
     // Get week dates
     const getWeekDates = () => {
@@ -53,6 +57,37 @@ export default function Calendar() {
     };
 
     const weekDates = getWeekDates();
+
+    // Update events when week changes or data loads
+    useEffect(() => {
+        if (dbEvents.length === 0) return;
+
+        const startOfWeek = weekDates[0];
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(weekDates[6]);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        const currentWeekEvents = dbEvents.filter(e => {
+            const d = new Date(e.date);
+            return d >= startOfWeek && d <= endOfWeek;
+        });
+
+        const mapped: CalendarEvent[] = currentWeekEvents.map(e => {
+            const d = new Date(e.date);
+            return {
+                id: e.id,
+                title: e.title,
+                startHour: d.getHours(),
+                endHour: d.getHours() + 2, // Default duration if not specified
+                day: d.getDay(),
+                color: 'bg-indigo-500',
+                location: e.location
+            };
+        });
+
+        setEvents(mapped);
+    }, [dbEvents, currentDate]);
 
     const navigateWeek = (direction: number) => {
         const newDate = new Date(currentDate);
