@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  ORGANIZER
+  PARTICIPANT
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  password      String
+  name          String
+  department    String?
+  year          String?
+  avatar        String?
+  role          UserRole     @default(PARTICIPANT)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  memberships   Membership[]
+  organizedEvents Event[]    @relation("Organizer")
+  registrations EventRegistration[]
+  resourceBookings ResourceBooking[]
+  notifications Notification[]
+}
+
+model Club {
+  id            String       @id @default(uuid())
+  name          String       @unique
+  description   String?
+  category      String?
+  logo          String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  members       Membership[]
+  events        Event[]
+}
+
+model Membership {
+  id            String       @id @default(uuid())
+  userId        String
+  clubId        String
+  role          String       @default("MEMBER") // MEMBER, LEAD, COORDINATOR
+  joinedAt      DateTime     @default(now())
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club          Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clubId])
+}
+
+model Event {
+  id            String       @id @default(uuid())
+  title         String
+  description   String?
+  date          DateTime
+  endDate       DateTime?
+  location      String?
+  budget        Float        @default(0)
+  status        EventStatus  @default(DRAFT)
+  isMultiDay    Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  organizerId   String
+  organizer     User         @relation("Organizer", fields: [organizerId], references: [id])
+  clubId        String?
+  club          Club?        @relation(fields: [clubId], references: [id])
+  registrations EventRegistration[]
+  collaborators EventCollaborator[]
+  resourceBookings ResourceBooking[]
+}
+
+model EventRegistration {
+  id            String       @id @default(uuid())
+  eventId       String
+  userId        String
+  registeredAt  DateTime     @default(now())
+
+  event         Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model EventCollaborator {
+  id            String       @id @default(uuid())
+  eventId       String
+  clubId        String
+  role          String?
+
+  event         Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, clubId])
+}
+
+enum ResourceType {
+  ROOM
+  HALL
+  LAB
+  EQUIPMENT
+  VEHICLE
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+model Resource {
+  id            String        @id @default(uuid())
+  name          String
+  type          ResourceType
+  description   String?
+  location      String?
+  capacity      Int?
+  image         String?
+  isAvailable   Boolean       @default(true)
+  requiresApproval Boolean    @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  bookings      ResourceBooking[]
+}
+
+model ResourceBooking {
+  id            String        @id @default(uuid())
+  resourceId    String
+  userId        String
+  eventId       String?
+  title         String
+  purpose       String?
+  startTime     DateTime
+  endTime       DateTime
+  status        BookingStatus @default(PENDING)
+  adminNotes    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  resource      Resource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event         Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+}
+
+enum NotificationType {
+  EVENT_APPROVED
+  EVENT_REJECTED
+  EVENT_REMINDER
+  BOOKING_APPROVED
+  BOOKING_REJECTED
+  BOOKING_REMINDER
+  CLUB_INVITE
+  ANNOUNCEMENT
+  SYSTEM
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String
+  type          NotificationType
+  title         String
+  message       String
+  link          String?
+  isRead        Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

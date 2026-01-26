@@ -1,0 +1,12 @@
+
+> campus-system-web@0.1.0 build
+> tsc && vite build
+
+src/App.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/Analytics.tsx(14,8): error TS2307: Cannot find module 'recharts' or its corresponding type declarations.
+src/components/Analytics.tsx(94,46): error TS6133: 'entry' is declared but its value is never read.
+src/components/EventCard.tsx(2,57): error TS6133: 'Clock' is declared but its value is never read.
+src/components/ResourceList.tsx(4,27): error TS6133: 'Calendar' is declared but its value is never read.
+src/components/ResourceList.tsx(4,71): error TS6133: 'CheckCircle2' is declared but its value is never read.
+src/components/ResourceList.tsx(13,10): error TS6133: 'bookings' is declared but its value is never read.
+src/services/mockService.ts(1,49): error TS6133: 'User' is declared but its value is never read.

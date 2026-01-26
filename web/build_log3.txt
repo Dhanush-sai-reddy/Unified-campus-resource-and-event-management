@@ -1,0 +1,21 @@
+
+> campus-system-web@0.1.0 build
+> tsc && vite build
+
+src/components/Sidebar.tsx(12,5): error TS6133: 'Bell' is declared but its value is never read.
+src/components/Sidebar.tsx(37,11): error TS6133: 'location' is declared but its value is never read.
+src/components/Sidebar.tsx(78,39): error TS7031: Binding element 'isActive' implicitly has an 'any' type.
+src/pages/Analytics.tsx(3,128): error TS2307: Cannot find module 'recharts' or its corresponding type declarations.
+src/pages/Clubs.tsx(3,25): error TS6133: 'Plus' is declared but its value is never read.
+src/pages/Clubs.tsx(3,55): error TS6133: 'Trophy' is declared but its value is never read.
+src/pages/CreateEvent.tsx(9,11): error TS6133: 'user' is declared but its value is never read.
+src/pages/CreateEvent.tsx(33,33): error TS6133: 'isDraft' is declared but its value is never read.
+src/pages/Events.tsx(4,35): error TS6133: 'Clock' is declared but its value is never read.
+src/pages/Events.tsx(4,56): error TS6133: 'Filter' is declared but its value is never read.
+src/pages/Profile.tsx(3,10): error TS6133: 'User' is declared but its value is never read.
+src/pages/Profile.tsx(3,32): error TS6133: 'GraduationCap' is declared but its value is never read.
+src/pages/Resources.tsx(3,39): error TS6133: 'getBookings' is declared but its value is never read.
+src/pages/Resources.tsx(4,43): error TS6133: 'Filter' is declared but its value is never read.
+src/pages/Resources.tsx(4,61): error TS6133: 'Calendar' is declared but its value is never read.
+src/pages/Resources.tsx(4,71): error TS6133: 'ChevronLeft' is declared but its value is never read.
+src/pages/Resources.tsx(4,84): error TS6133: 'ChevronRight' is declared but its value is never read.
