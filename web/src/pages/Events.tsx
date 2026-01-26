@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, MapPin, Users, Plus, Search, Grid, List, ChevronRight, X } from 'lucide-react';
+import { Calendar, MapPin, Users, Plus, Search, Grid, List, ChevronRight, X, MessageCircle } from 'lucide-react';
 import { Event, EventStatus, Booking } from '../types';
 import { getEvents, getBookings } from '../services/mockService';
 import { useAuth } from '../context/AuthContext';
@@ -84,6 +84,7 @@ export default function Events() {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const { user } = useAuth();
+    const navigate = useNavigate();
 
     // Modal State
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -310,7 +311,18 @@ export default function Events() {
                                     )}
                                 </div>
 
-                                <div className="flex justify-end pt-2">
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button
+                                        onClick={() => {
+                                            const eventSlug = selectedEvent.id;
+                                            const eventName = encodeURIComponent(selectedEvent.title);
+                                            navigate(`/chat?event=${eventSlug}&name=${eventName}`);
+                                        }}
+                                        className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-colors flex items-center gap-2"
+                                    >
+                                        <MessageCircle size={16} />
+                                        Join Event Chat
+                                    </button>
                                     <button
                                         onClick={() => setSelectedEvent(null)}
                                         className="px-4 py-2 text-sm font-medium text-surface-700 bg-surface-100 hover:bg-surface-200 rounded-xl transition-colors"
