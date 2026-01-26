@@ -5,7 +5,8 @@ import { API_BASE_URL } from '../config';
 
 interface AuthContextType {
     user: User | null;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<any>;
+    loginWithData: (user: User, token: string) => void;
     logout: () => void;
     isAuthenticated: boolean;
     loading: boolean;
@@ -45,8 +46,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const data = await response.json();
+        // For OTP flow, we return the data instead of setting it immediately if needed, 
+        // but here we maintain current behavior for other components and add a helper logic if needed.
+        // Actually, for OTP we will bypass this 'login' function in the component and use 'verifyLogin' logic there,
+        // then call 'completeLogin' here.
         localStorage.setItem('token', data.token);
         setUser(data.user);
+        return data;
+    };
+
+    const loginWithData = (user: User, token: string) => {
+        localStorage.setItem('token', token);
+        setUser(user);
     };
 
     const logout = () => {
@@ -55,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading }}>
+        <AuthContext.Provider value={{ user, login, loginWithData, logout, isAuthenticated: !!user, loading }}>
             {children}
         </AuthContext.Provider>
     );
