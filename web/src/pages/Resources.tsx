@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Resource, ResourceType, Booking } from '../types';
 import { getResources, createBooking, getBookings } from '../services/mockService';
-import { Monitor, Square, Search, X, Clock, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Lock } from 'lucide-react';
+import { Monitor, Square, Search, X, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import ResourceTimeline from '../components/ResourceTimeline';
