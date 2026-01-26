@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Resource, ResourceType, Booking } from '../types';
 import { getResources, createBooking, getBookings } from '../services/mockService';
-import { Monitor, Square, Search, X, Clock, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { Monitor, Square, Search, X, Clock, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import ResourceTimeline from '../components/ResourceTimeline';
@@ -159,6 +159,22 @@ function TimeSlotSelector({ label, value, onChange }: { label: string; value: st
 
 export default function Resources() {
     const { user } = useAuth();
+
+    if (user?.role === 'PARTICIPANT') {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+                <div className="bg-surface-100 p-4 rounded-full mb-4">
+                    <Lock size={48} className="text-surface-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-surface-900 mb-2">Access Restricted</h2>
+                <p className="text-surface-500 max-w-md">
+                    Resource booking is restricted to Organizers and Administrators.
+                    Please contact an administrator if you need access.
+                </p>
+            </div>
+        );
+    }
+
     const [resources, setResources] = useState<Resource[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);

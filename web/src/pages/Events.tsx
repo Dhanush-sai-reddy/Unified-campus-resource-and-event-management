@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Calendar, MapPin, Users, Plus, Search, Grid, List, ChevronRight } from 'lucide-react';
-import { Event, EventStatus } from '../types';
-import { getEvents } from '../services/mockService';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, MapPin, Users, Plus, Search, Grid, List, ChevronRight, X } from 'lucide-react';
+import { Event, EventStatus, Booking } from '../types';
+import { getEvents, getBookings } from '../services/mockService';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 
@@ -15,7 +15,7 @@ const statusColors: Record<EventStatus, string> = {
     [EventStatus.COMPLETED]: 'bg-blue-50 text-blue-700 border-blue-200',
 };
 
-function EventCard({ event }: { event: Event }) {
+function EventCard({ event, onViewDetails }: { event: Event, onViewDetails: (event: Event) => void }) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -23,7 +23,7 @@ function EventCard({ event }: { event: Event }) {
             whileHover={{ y: -4 }}
             className="glass-card rounded-2xl overflow-hidden group"
         >
-            {/* Event image/gradient */}
+            {/* ... existing card content ... */}
             <div className="h-32 bg-gradient-to-br from-primary-500 to-indigo-600 relative">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="absolute bottom-4 left-4">
@@ -34,6 +34,7 @@ function EventCard({ event }: { event: Event }) {
             </div>
 
             <div className="p-5">
+                {/* ... existing info ... */}
                 <div className="flex items-start justify-between mb-3">
                     <div>
                         <h3 className="font-bold text-lg text-surface-900 group-hover:text-primary-600 transition-colors">
@@ -64,13 +65,13 @@ function EventCard({ event }: { event: Event }) {
                     </div>
                 </div>
 
-                <Link
-                    to={`/events/${event.id}`}
+                <button
+                    onClick={() => onViewDetails(event)}
                     className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-100 text-surface-700 font-medium hover:bg-primary-50 hover:text-primary-600 transition-colors"
                 >
                     View Details
                     <ChevronRight size={16} />
-                </Link>
+                </button>
             </div>
         </motion.div>
     );
@@ -83,6 +84,27 @@ export default function Events() {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const { user } = useAuth();
+
+    // Modal State
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [eventBookings, setEventBookings] = useState<Booking[]>([]);
+    const [loadingResources, setLoadingResources] = useState(false);
+
+    const handleViewDetails = async (event: Event) => {
+        setSelectedEvent(event);
+        setLoadingResources(true);
+        try {
+            // Fetch all bookings and filter by event ID
+            // In a real API, we would call getBookings(undefined, event.id)
+            const allBookings = await getBookings();
+            const relevant = allBookings.filter(b => (b as any).eventName === event.title || b.title === event.title || b.eventId === event.id); // Check variations for mock data compatibility
+            setEventBookings(relevant);
+        } catch (e) {
+            console.error(e);
+            setEventBookings([]);
+        }
+        setLoadingResources(false);
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -192,10 +214,115 @@ export default function Events() {
                     }
                 >
                     {filteredEvents.map((event) => (
-                        <EventCard key={event.id} event={event} />
+                        <EventCard key={event.id} event={event} onViewDetails={handleViewDetails} />
                     ))}
                 </motion.div>
             )}
+            {/* Event Details Modal */}
+            <AnimatePresence>
+                {selectedEvent && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedEvent(null)}
+                            className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-surface-100"
+                        >
+                            <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center bg-surface-50/50">
+                                <h3 className="text-lg font-bold text-surface-900">
+                                    {selectedEvent.title}
+                                </h3>
+                                <button onClick={() => setSelectedEvent(null)} className="text-surface-400 hover:text-surface-600 transition-colors p-1 rounded-lg hover:bg-surface-100">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                {/* Event Description */}
+                                <div>
+                                    <h4 className="text-sm font-semibold text-surface-700 mb-2">About Event</h4>
+                                    <p className="text-surface-600 leading-relaxed text-sm">{selectedEvent.description}</p>
+                                </div>
+
+                                {/* Event Info Grid */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 bg-surface-50 rounded-xl">
+                                        <div className="flex items-center gap-2 text-surface-500 text-xs mb-1">
+                                            <Calendar size={14} />
+                                            <span>Date & Time</span>
+                                        </div>
+                                        <p className="font-medium text-surface-900 text-sm">
+                                            {new Date(selectedEvent.date).toLocaleDateString('en-US', {
+                                                weekday: 'short', month: 'short', day: 'numeric'
+                                            })}
+                                        </p>
+                                    </div>
+                                    <div className="p-3 bg-surface-50 rounded-xl">
+                                        <div className="flex items-center gap-2 text-surface-500 text-xs mb-1">
+                                            <MapPin size={14} />
+                                            <span>Location/Resource</span>
+                                        </div>
+                                        <p className="font-medium text-surface-900 text-sm">{selectedEvent.location}</p>
+                                    </div>
+                                </div>
+
+                                {/* Allocated Resources */}
+                                <div>
+                                    <h4 className="text-sm font-semibold text-surface-700 mb-3 flex items-center gap-2">
+                                        <Grid size={16} className="text-primary-600" />
+                                        Allocated Resources
+                                    </h4>
+
+                                    {loadingResources ? (
+                                        <div className="text-center py-4 text-sm text-surface-500">Loading resources...</div>
+                                    ) : eventBookings.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {eventBookings.map(booking => (
+                                                <div key={booking.id} className="flex items-center justify-between p-3 border border-surface-200 rounded-xl bg-surface-50">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2 bg-white rounded-lg border border-surface-100 text-surface-500">
+                                                            <Calendar size={16} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-surface-900 text-sm">{booking.resource?.name || booking.resourceId}</p>
+                                                            <p className="text-xs text-surface-500">
+                                                                {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                                        Reserved
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-6 bg-surface-50 rounded-xl border border-dashed border-surface-200">
+                                            <p className="text-sm text-surface-500">No specific resources allocated via system yet.</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        onClick={() => setSelectedEvent(null)}
+                                        className="px-4 py-2 text-sm font-medium text-surface-700 bg-surface-100 hover:bg-surface-200 rounded-xl transition-colors"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
