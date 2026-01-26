@@ -28,6 +28,14 @@ export const api = {
     },
 
     // Resources & Bookings
+    getResources: async (): Promise<any[]> => {
+        const response = await fetch(`${API_BASE_URL}/resources?available=true`, {
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to fetch resources');
+        return response.json();
+    },
+
     getBookings: async (params?: {
         status?: string;
         resourceId?: string;
