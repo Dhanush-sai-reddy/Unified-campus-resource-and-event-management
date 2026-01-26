@@ -189,8 +189,6 @@ export default function Resources() {
     // Booking form state
     const [eventName, setEventName] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [endDate, setEndDate] = useState(new Date());
-    const [isMultiDay, setIsMultiDay] = useState(false);
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('10:00');
 
@@ -209,13 +207,6 @@ export default function Resources() {
         setLoading(false);
     };
 
-    // Reset end date when start date changes if not multi-day
-    useEffect(() => {
-        if (!isMultiDay) {
-            setEndDate(new Date(selectedDate));
-        }
-    }, [selectedDate, isMultiDay]);
-
     useEffect(() => {
         fetchData();
     }, []);
@@ -225,8 +216,6 @@ export default function Resources() {
         setIsModalOpen(true);
         setError(null);
         setSelectedDate(new Date());
-        setEndDate(new Date());
-        setIsMultiDay(false);
         setStartTime('09:00');
         setEndTime('10:00');
     };
@@ -238,26 +227,21 @@ export default function Resources() {
         // Reset error
         setError(null);
 
-        // Validate dates and times
-        const startDateStr = selectedDate.toISOString().split('T')[0];
-        const endDateStr = endDate.toISOString().split('T')[0];
-
-        const startDateTime = new Date(`${startDateStr}T${startTime}:00`);
-        const endDateTime = new Date(`${endDateStr}T${endTime}:00`);
-
-        if (endDateTime <= startDateTime) {
+        // Validate times
+        if (startTime >= endTime) {
             setError('End time must be after start time');
             return;
         }
 
         try {
+            const dateStr = selectedDate.toISOString().split('T')[0];
             await createBooking({
                 resourceId: selectedResource.id,
                 userId: user.id,
                 userName: user.name,
                 eventName,
-                startTime: startDateTime.toISOString(),
-                endTime: endDateTime.toISOString(),
+                startTime: `${dateStr}T${startTime}:00.000Z`,
+                endTime: `${dateStr}T${endTime}:00.000Z`,
             });
             setIsModalOpen(false);
             setEventName('');
@@ -540,29 +524,12 @@ export default function Resources() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Left: Calendar */}
                                     <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="block text-sm font-medium text-surface-700">
-                                                {isMultiDay ? 'Start Date' : 'Select Date'}
-                                            </label>
-                                            <label className="flex items-center gap-2 text-xs text-primary-600 cursor-pointer select-none bg-primary-50 px-2 py-1 rounded-lg border border-primary-100">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isMultiDay}
-                                                    onChange={(e) => setIsMultiDay(e.target.checked)}
-                                                    className="w-3.5 h-3.5 rounded text-primary-600 focus:ring-primary-500"
-                                                />
-                                                Multi-day Event
-                                            </label>
-                                        </div>
-
+                                        <label className="block text-sm font-medium text-surface-700 mb-2">Select Date</label>
                                         <MiniCalendar selectedDate={selectedDate} onSelect={setSelectedDate} />
-
-                                        {isMultiDay && (
-                                            <div className="mt-4">
-                                                <label className="block text-sm font-medium text-surface-700 mb-2">End Date</label>
-                                                <MiniCalendar selectedDate={endDate} onSelect={setEndDate} />
-                                            </div>
-                                        )}
+                                        <p className="mt-3 text-sm text-surface-600 flex items-center gap-2">
+                                            {/* Clock icon removed to avoid import error */}
+                                            Selected: {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                        </p>
                                     </div>
 
                                     {/* Right: Event details and time */}
@@ -579,23 +546,8 @@ export default function Resources() {
                                             />
                                         </div>
 
-                                        <div className="p-4 bg-surface-50 rounded-xl space-y-3 border border-surface-100">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-surface-500">From</span>
-                                                <span className="font-medium text-surface-900">
-                                                    {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {startTime}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-surface-500">To</span>
-                                                <span className="font-medium text-surface-900">
-                                                    {(isMultiDay ? endDate : selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {endTime}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <TimeSlotSelector label="Start Time (Day 1)" value={startTime} onChange={setStartTime} />
-                                        <TimeSlotSelector label={`End Time (${isMultiDay ? 'Last Day' : 'Day 1'})`} value={endTime} onChange={setEndTime} />
+                                        <TimeSlotSelector label="Start Time" value={startTime} onChange={setStartTime} />
+                                        <TimeSlotSelector label="End Time" value={endTime} onChange={setEndTime} />
                                     </div>
                                 </div>
 
