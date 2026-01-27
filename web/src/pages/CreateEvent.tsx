@@ -1,449 +1,352 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, MapPin, FileText, DollarSign, Users, ArrowLeft, ArrowRight, Save, Send, Building2, Check, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, ArrowLeft } from 'lucide-react';
 import { api } from '../services/api';
-import { Resource } from '../types';
+
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 8); // 8 AM to 9 PM
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Vibrant color palette for drag selection
+const COLORS = [
+    { bg: 'bg-violet-500', light: 'bg-violet-500/20', border: 'border-violet-500' },
+    { bg: 'bg-blue-500', light: 'bg-blue-500/20', border: 'border-blue-500' },
+    { bg: 'bg-emerald-500', light: 'bg-emerald-500/20', border: 'border-emerald-500' },
+    { bg: 'bg-amber-500', light: 'bg-amber-500/20', border: 'border-amber-500' },
+    { bg: 'bg-rose-500', light: 'bg-rose-500/20', border: 'border-rose-500' },
+    { bg: 'bg-cyan-500', light: 'bg-cyan-500/20', border: 'border-cyan-500' },
+];
 
 export default function CreateEvent() {
     const navigate = useNavigate();
-    const [step, setStep] = useState(1);
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedColor, setSelectedColor] = useState(COLORS[0]);
+
+    // Drag selection state
+    const [isSelecting, setIsSelecting] = useState(false);
+    const [selectionStart, setSelectionStart] = useState<{ day: number; hour: number } | null>(null);
+    const [selectionEnd, setSelectionEnd] = useState<{ day: number; hour: number } | null>(null);
+
+    // Popover state
+    const [showPopover, setShowPopover] = useState(false);
+    const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+    const [eventData, setEventData] = useState({ title: '', description: '' });
     const [loading, setLoading] = useState(false);
-    const [resources, setResources] = useState<Resource[]>([]);
-    const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        date: '',
-        endDate: '',
-        location: '',
-        resourceId: '',
-        budget: '',
-        expectedParticipants: '',
-        isMultiDay: false,
-        collaboratingClubs: [] as string[],
-    });
 
-    useEffect(() => {
-        const fetchResources = async () => {
-            try {
-                const data = await api.getResources();
-                setResources(data);
-            } catch (error) {
-                console.error("Failed to load resources");
-            }
-        };
-        fetchResources();
-    }, []);
+    const calendarRef = useRef<HTMLDivElement>(null);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target;
-        if (type === 'checkbox') {
-            setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
-    };
-
-    const handleResourceSelect = (resource: Resource) => {
-        const isSelected = formData.resourceId === resource.id;
-        setFormData({
-            ...formData,
-            resourceId: isSelected ? '' : resource.id,
-            location: isSelected ? '' : resource.name,
+    // Get week dates
+    const getWeekDates = () => {
+        const start = new Date(currentDate);
+        start.setDate(start.getDate() - start.getDay());
+        return Array.from({ length: 7 }, (_, i) => {
+            const date = new Date(start);
+            date.setDate(start.getDate() + i);
+            return date;
         });
     };
 
-    const handleSubmit = async () => {
+    const weekDates = getWeekDates();
+
+    const navigateWeek = (direction: number) => {
+        const newDate = new Date(currentDate);
+        newDate.setDate(newDate.getDate() + direction * 7);
+        setCurrentDate(newDate);
+    };
+
+    const goToToday = () => setCurrentDate(new Date());
+
+    const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
+
+    // Get grid coordinates from mouse position
+    const getGridCoordinates = (e: React.MouseEvent) => {
+        if (!calendarRef.current) return null;
+        const rect = calendarRef.current.getBoundingClientRect();
+        const gridTop = rect.top + 48;
+        const cellHeight = (rect.height - 48) / HOURS.length;
+        const cellWidth = (rect.width - 60) / 7;
+
+        const relativeY = e.clientY - gridTop;
+        const relativeX = e.clientX - rect.left - 60;
+
+        const hour = Math.max(8, Math.min(21, Math.floor(relativeY / cellHeight) + 8));
+        const day = Math.max(0, Math.min(6, Math.floor(relativeX / cellWidth)));
+
+        return { day, hour };
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if ((e.target as HTMLElement).closest('.grid-header') || (e.target as HTMLElement).closest('.event-popover')) return;
+
+        if (showPopover) {
+            setShowPopover(false);
+            setSelectionStart(null);
+            setSelectionEnd(null);
+            return;
+        }
+
+        const coords = getGridCoordinates(e);
+        if (coords) {
+            // Pick a random color for this selection
+            setSelectedColor(COLORS[Math.floor(Math.random() * COLORS.length)]);
+            setIsSelecting(true);
+            setSelectionStart(coords);
+            setSelectionEnd(coords);
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isSelecting || !selectionStart) return;
+        const coords = getGridCoordinates(e);
+        if (coords) {
+            // Keep same day for simplicity
+            setSelectionEnd({ day: selectionStart.day, hour: coords.hour });
+        }
+    };
+
+    const handleMouseUp = (e: React.MouseEvent) => {
+        if (isSelecting && selectionStart && selectionEnd) {
+            const startH = Math.min(selectionStart.hour, selectionEnd.hour);
+            const endH = Math.max(selectionStart.hour, selectionEnd.hour) + 1;
+
+            // Calculate popover position
+            if (calendarRef.current) {
+                const rect = calendarRef.current.getBoundingClientRect();
+                const cellWidth = (rect.width - 60) / 7;
+
+                let left = 60 + (selectionStart.day + 1) * cellWidth + 10;
+                if (selectionStart.day >= 5) {
+                    left = 60 + selectionStart.day * cellWidth - 310;
+                }
+
+                const top = (startH - 8) * 60 + 60;
+
+                setPopoverPosition({ top, left });
+                setShowPopover(true);
+                setEventData({ title: '', description: '' });
+            }
+        }
+
+        setIsSelecting(false);
+    };
+
+    const handleCreate = async () => {
+        if (!eventData.title.trim() || !selectionStart || !selectionEnd) return;
+
         setLoading(true);
         try {
-            const event = await api.createEvent({
-                title: formData.title,
-                description: formData.description,
-                date: new Date(formData.date).toISOString(),
-                endDate: formData.isMultiDay && formData.endDate ? new Date(formData.endDate).toISOString() : new Date(formData.date).toISOString(),
-                location: formData.location,
-                budget: parseFloat(formData.budget) || 0,
-                // @ts-ignore
-                isMultiDay: formData.isMultiDay,
+            const startH = Math.min(selectionStart.hour, selectionEnd.hour);
+            const endH = Math.max(selectionStart.hour, selectionEnd.hour) + 1;
+
+            const startDate = new Date(weekDates[selectionStart.day]);
+            startDate.setHours(startH, 0, 0, 0);
+
+            const endDate = new Date(weekDates[selectionStart.day]);
+            endDate.setHours(endH, 0, 0, 0);
+
+            await api.createEvent({
+                title: eventData.title,
+                description: eventData.description,
+                date: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                location: '',
+                budget: 0,
             });
 
-            if (formData.resourceId) {
-                const startTime = new Date(formData.date);
-                const endTime = formData.isMultiDay && formData.endDate
-                    ? new Date(formData.endDate)
-                    : new Date(new Date(formData.date).setHours(new Date(formData.date).getHours() + 2));
-
-                await api.createBooking(formData.resourceId, {
-                    title: `Event: ${event.title}`,
-                    purpose: "Event Reservation",
-                    startTime: startTime.toISOString(),
-                    endTime: endTime.toISOString(),
-                    eventId: event.id
-                });
-            }
-
-            setLoading(false);
             navigate('/events');
         } catch (error) {
-            console.error(error);
-            alert("Failed to create event. Please try again.");
+            console.error('Failed to create event', error);
+            alert('Failed to create event');
+        } finally {
             setLoading(false);
         }
     };
 
-    const clubs = [
-        { id: 'c1', name: 'Coding Club' },
-        { id: 'c2', name: 'AI Society' },
-        { id: 'c3', name: 'Cultural Club' },
-        { id: 'c4', name: 'Sports Committee' },
-        { id: 'c5', name: 'Entrepreneurship Cell' },
-    ];
+    const getSelectionStyle = () => {
+        if (!selectionStart || !selectionEnd) return {};
 
-    const steps = [
-        { id: 1, title: 'Details', icon: FileText },
-        { id: 2, title: 'Logistics', icon: Calendar },
-        { id: 3, title: 'Scope', icon: Users },
-    ];
+        const startH = Math.min(selectionStart.hour, selectionEnd.hour);
+        const endH = Math.max(selectionStart.hour, selectionEnd.hour);
+
+        return {
+            top: `${(startH - 8) * 60}px`,
+            height: `${(endH - startH + 1) * 60}px`,
+            left: `${60 + (selectionStart.day * ((100 - 4.5) / 7))}%`,
+            width: `${(100 - 4.5) / 7 - 0.5}%`,
+        };
+    };
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8">
-            <button
-                onClick={() => navigate('/events')}
-                className="group flex items-center gap-2 text-surface-500 hover:text-surface-900 mb-8 transition-colors"
-                disabled={loading}
-            >
-                <div className="p-2 rounded-full bg-white border border-surface-200 group-hover:bg-surface-50 transition-colors">
-                    <ArrowLeft size={16} />
-                </div>
-                <span className="font-medium">Back to Events</span>
-            </button>
-
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* Left Side - Progress & Info */}
-                <div className="lg:w-1/3">
-                    <div className="glass-card p-6 sticky top-8">
-                        <div className="mb-8">
-                            <div className="w-12 h-12 rounded-2xl bg-primary-100 text-primary-600 flex items-center justify-center mb-4 shadow-sm">
-                                <Sparkles size={24} />
-                            </div>
-                            <h1 className="text-2xl font-display font-bold text-surface-900 leading-tight">Create Exquisite Experience</h1>
-                            <p className="text-surface-500 mt-2 text-sm leading-relaxed">
-                                Craft your event details carefully. A great event starts with a great plan.
-                            </p>
-                        </div>
-
-                        <div className="space-y-4">
-                            {steps.map((s, idx) => (
-                                <div key={s.id} className="relative">
-                                    {idx !== steps.length - 1 && (
-                                        <div className={`absolute left-5 top-10 bottom-0 w-0.5 ml-px h-8 ${step > s.id ? 'bg-primary-500' : 'bg-surface-200'}`} />
-                                    )}
-                                    <div className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${step === s.id ? 'bg-primary-50 border border-primary-100' : ''}`}>
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors z-10 ${step >= s.id
-                                            ? 'bg-primary-600 border-primary-600 text-white shadow-md shadow-primary-500/20'
-                                            : 'bg-white border-surface-200 text-surface-400'
-                                            }`}>
-                                            <s.icon size={18} />
-                                        </div>
-                                        <div>
-                                            <p className={`font-semibold text-sm ${step >= s.id ? 'text-surface-900' : 'text-surface-400'}`}>
-                                                {s.title}
-                                            </p>
-                                            {step === s.id && (
-                                                <motion.p
-                                                    initial={{ opacity: 0, y: -5 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    className="text-xs text-primary-600 font-medium"
-                                                >
-                                                    In Progress
-                                                </motion.p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Side - Form */}
-                <div className="lg:w-2/3">
-                    <div className="glass-card p-8 min-h-[500px] flex flex-col relative overflow-hidden">
-                        {/* Decorative background blobs */}
-                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary-50/50 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl pointer-events-none" />
-
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={step}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.2 }}
-                                className="flex-1 relative z-10"
-                            >
-                                {step === 1 && (
-                                    <div className="space-y-6">
-                                        <div className="mb-6">
-                                            <h2 className="text-xl font-bold text-surface-900">Event Essentials</h2>
-                                            <p className="text-sm text-surface-500">Let's start with the core details of your event.</p>
-                                        </div>
-
-                                        <div className="group">
-                                            <label className="block text-sm font-semibold text-surface-700 mb-2 ml-1">Event Title</label>
-                                            <input
-                                                type="text"
-                                                name="title"
-                                                value={formData.title}
-                                                onChange={handleChange}
-                                                placeholder="e.g. HackOverflow 2026"
-                                                className="w-full px-5 py-3.5 rounded-2xl bg-surface-50 border border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium placeholder:text-surface-400"
-                                                autoFocus
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-surface-700 mb-2 ml-1">Description</label>
-                                            <textarea
-                                                name="description"
-                                                value={formData.description}
-                                                onChange={handleChange}
-                                                rows={5}
-                                                placeholder="What is this event about? Share the excitement..."
-                                                className="w-full px-5 py-3.5 rounded-2xl bg-surface-50 border border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none resize-none placeholder:text-surface-400"
-                                            />
-                                        </div>
-
-                                        <label className="flex items-center gap-4 p-4 rounded-2xl bg-surface-50 border border-surface-200 cursor-pointer hover:border-primary-200 transition-colors">
-                                            <div className="relative flex items-center">
-                                                <input
-                                                    type="checkbox"
-                                                    name="isMultiDay"
-                                                    checked={formData.isMultiDay}
-                                                    onChange={handleChange}
-                                                    className="peer sr-only"
-                                                />
-                                                <div className="w-11 h-6 bg-surface-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                                            </div>
-                                            <div>
-                                                <span className="font-semibold text-surface-900 block">Multi-day Event</span>
-                                                <span className="text-sm text-surface-500">This event spans across multiple days</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                )}
-
-                                {step === 2 && (
-                                    <div className="space-y-6">
-                                        <div className="mb-6">
-                                            <h2 className="text-xl font-bold text-surface-900">Time & Venue</h2>
-                                            <p className="text-sm text-surface-500">When and where will the magic happen?</p>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-surface-700 ml-1">Start Date</label>
-                                                <div className="relative">
-                                                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" size={18} />
-                                                    <input
-                                                        type="datetime-local"
-                                                        name="date"
-                                                        value={formData.date}
-                                                        onChange={handleChange}
-                                                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-surface-50 border border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                            {formData.isMultiDay && (
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-surface-700 ml-1">End Date</label>
-                                                    <div className="relative">
-                                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" size={18} />
-                                                        <input
-                                                            type="datetime-local"
-                                                            name="endDate"
-                                                            value={formData.endDate}
-                                                            onChange={handleChange}
-                                                            className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-surface-50 border border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center">
-                                                <label className="text-sm font-semibold text-surface-700 ml-1">Choose a Venue</label>
-                                                <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">Recommended</span>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[240px] overflow-y-auto pr-1">
-                                                {resources.map(resource => (
-                                                    <div
-                                                        key={resource.id}
-                                                        onClick={() => handleResourceSelect(resource)}
-                                                        className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 group ${formData.resourceId === resource.id
-                                                                ? 'border-primary-500 bg-primary-50/50 shadow-sm'
-                                                                : 'border-surface-100 hover:border-surface-300 hover:bg-surface-50'
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-start justify-between mb-2">
-                                                            <div className={`p-2 rounded-xl ${formData.resourceId === resource.id ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-surface-500 group-hover:bg-white'}`}>
-                                                                <Building2 size={18} />
-                                                            </div>
-                                                            {formData.resourceId === resource.id && (
-                                                                <div className="bg-primary-500 text-white p-1 rounded-full">
-                                                                    <Check size={12} />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <p className="font-semibold text-surface-900 text-sm">{resource.name}</p>
-                                                        <p className="text-xs text-surface-500 mt-1 line-clamp-1">{resource.description || resource.type}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <div className="relative pt-2">
-                                                <div className="absolute inset-x-0 w-full top-1/2 h-px bg-surface-200" />
-                                                <span className="relative z-10 bg-white px-2 text-xs font-medium text-surface-400 left-1/2 -translate-x-1/2 uppercase tracking-wide">Or specify manually</span>
-                                            </div>
-
-                                            <div className="relative">
-                                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" size={18} />
-                                                <input
-                                                    type="text"
-                                                    name="location"
-                                                    value={formData.location}
-                                                    onChange={handleChange}
-                                                    placeholder="Enter custom location..."
-                                                    className={`w-full pl-11 pr-4 py-3.5 rounded-2xl border focus:ring-4 focus:ring-primary-500/10 transition-all outline-none ${!formData.resourceId && formData.location
-                                                            ? 'bg-white border-primary-500 ring-4 ring-primary-500/10'
-                                                            : 'bg-surface-50 border-transparent focus:bg-white focus:border-primary-500'
-                                                        }`}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {step === 3 && (
-                                    <div className="space-y-6">
-                                        <div className="mb-6">
-                                            <h2 className="text-xl font-bold text-surface-900">Final Touches</h2>
-                                            <p className="text-sm text-surface-500">Define the scope and resources needed.</p>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-surface-700 ml-1">Est. Budget</label>
-                                                <div className="relative">
-                                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" size={18} />
-                                                    <input
-                                                        type="number"
-                                                        name="budget"
-                                                        value={formData.budget}
-                                                        onChange={handleChange}
-                                                        placeholder="5000"
-                                                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-surface-50 border border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-surface-700 ml-1">Headcount</label>
-                                                <div className="relative">
-                                                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" size={18} />
-                                                    <input
-                                                        type="number"
-                                                        name="expectedParticipants"
-                                                        value={formData.expectedParticipants}
-                                                        onChange={handleChange}
-                                                        placeholder="100"
-                                                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-surface-50 border border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <label className="text-sm font-semibold text-surface-700 ml-1">Collaborating Clubs</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {clubs.map((club) => {
-                                                    const isSelected = formData.collaboratingClubs.includes(club.id);
-                                                    return (
-                                                        <button
-                                                            key={club.id}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const newClubs = isSelected
-                                                                    ? formData.collaboratingClubs.filter(c => c !== club.id)
-                                                                    : [...formData.collaboratingClubs, club.id];
-                                                                setFormData({ ...formData, collaboratingClubs: newClubs });
-                                                            }}
-                                                            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border ${isSelected
-                                                                    ? 'bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-500/25'
-                                                                    : 'bg-surface-50 text-surface-600 border-surface-200 hover:bg-white hover:border-surface-300'
-                                                                }`}
-                                                        >
-                                                            {club.name}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </motion.div>
-                        </AnimatePresence>
-
-                        <div className="flex justify-between items-center mt-8 pt-6 border-t border-surface-100 z-20">
+        <div className="min-h-screen bg-gradient-to-br from-surface-50 via-white to-primary-50/30">
+            {/* Header */}
+            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-surface-200">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
                             <button
-                                type="button"
-                                onClick={() => setStep(s => Math.max(1, s - 1))}
-                                disabled={step === 1 || loading}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${step === 1
-                                        ? 'opacity-0 pointer-events-none'
-                                        : 'text-surface-600 hover:bg-surface-100'
-                                    }`}
+                                onClick={() => navigate('/events')}
+                                className="p-2 rounded-xl bg-surface-100 hover:bg-surface-200 transition-colors"
                             >
-                                <ArrowLeft size={18} />
-                                Back
+                                <ArrowLeft size={20} className="text-surface-600" />
                             </button>
+                            <div>
+                                <h1 className="text-xl font-bold text-surface-900">Create Event</h1>
+                                <p className="text-sm text-surface-500">Drag on the calendar to select time</p>
+                            </div>
+                        </div>
 
-                            <div className="flex items-center gap-3">
-                                {step === 3 && (
-                                    <button
-                                        type="button"
-                                        onClick={handleSubmit}
-                                        disabled={loading}
-                                        className="hidden sm:flex items-center gap-2 px-6 py-3 text-surface-700 font-semibold hover:bg-surface-100 rounded-xl transition-colors"
-                                    >
-                                        <Save size={18} />
-                                        Save Draft
-                                    </button>
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={() => step < 3 ? setStep(s => s + 1) : handleSubmit()}
-                                    disabled={loading}
-                                    className="flex items-center gap-2 px-8 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-all shadow-xl shadow-primary-500/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:hover:scale-100"
-                                >
-                                    {loading ? (
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : step < 3 ? (
-                                        <>
-                                            Next Step
-                                            <ArrowRight size={18} />
-                                        </>
-                                    ) : (
-                                        <>
-                                            Publish Event
-                                            <Send size={18} />
-                                        </>
-                                    )}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={goToToday}
+                                className="px-4 py-2 text-sm font-medium text-surface-700 bg-white border border-surface-200 rounded-xl hover:bg-surface-50 transition-colors"
+                            >
+                                Today
+                            </button>
+                            <div className="flex items-center bg-white border border-surface-200 rounded-xl overflow-hidden">
+                                <button onClick={() => navigateWeek(-1)} className="p-2 hover:bg-surface-50 transition-colors">
+                                    <ChevronLeft size={20} />
+                                </button>
+                                <span className="px-4 py-2 text-sm font-medium text-surface-700 min-w-[180px] text-center">
+                                    {formatDate(weekDates[0])} - {formatDate(weekDates[6])}
+                                </span>
+                                <button onClick={() => navigateWeek(1)} className="p-2 hover:bg-surface-50 transition-colors">
+                                    <ChevronRight size={20} />
                                 </button>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Calendar */}
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                <div
+                    ref={calendarRef}
+                    className="bg-white rounded-2xl shadow-xl border border-surface-200 overflow-hidden select-none relative"
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                >
+                    {/* Days header */}
+                    <div className="grid grid-cols-8 border-b border-surface-200 bg-surface-50 grid-header">
+                        <div className="w-[60px]"></div>
+                        {weekDates.map((date, i) => (
+                            <div key={i} className="py-3 text-center border-l border-surface-200">
+                                <p className="text-xs text-surface-500 uppercase">{DAYS[i]}</p>
+                                <p className={`text-lg font-semibold ${isToday(date) ? 'text-white bg-primary-600 w-8 h-8 rounded-full mx-auto flex items-center justify-center' : 'text-surface-900'}`}>
+                                    {date.getDate()}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Time grid */}
+                    <div className="relative" style={{ height: `${HOURS.length * 60}px` }}>
+                        {/* Hour rows */}
+                        {HOURS.map((hour, i) => (
+                            <div key={hour} className="absolute left-0 right-0 flex border-b border-surface-100" style={{ top: `${i * 60}px`, height: '60px' }}>
+                                <div className="w-[60px] pr-2 pt-1 text-right">
+                                    <span className="text-xs text-surface-400">{hour > 12 ? hour - 12 : hour} {hour >= 12 ? 'PM' : 'AM'}</span>
+                                </div>
+                                {Array.from({ length: 7 }).map((_, dayIndex) => (
+                                    <div
+                                        key={dayIndex}
+                                        className="flex-1 border-l border-surface-100 hover:bg-primary-50/30 transition-colors cursor-crosshair"
+                                    />
+                                ))}
+                            </div>
+                        ))}
+
+                        {/* Drag selection overlay - COLOR SPRAY */}
+                        {(isSelecting || showPopover) && selectionStart && selectionEnd && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className={`absolute ${selectedColor.light} border-2 ${selectedColor.border} rounded-xl pointer-events-none z-10`}
+                                style={getSelectionStyle()}
+                            >
+                                <div className={`absolute inset-x-0 top-0 h-1 ${selectedColor.bg} rounded-t-lg`} />
+                                <div className="p-2 text-xs font-medium text-surface-700">
+                                    {Math.min(selectionStart.hour, selectionEnd.hour) > 12 ? Math.min(selectionStart.hour, selectionEnd.hour) - 12 : Math.min(selectionStart.hour, selectionEnd.hour)}:00
+                                    {' - '}
+                                    {(Math.max(selectionStart.hour, selectionEnd.hour) + 1) > 12 ? (Math.max(selectionStart.hour, selectionEnd.hour) + 1) - 12 : (Math.max(selectionStart.hour, selectionEnd.hour) + 1)}:00
+                                </div>
+                            </motion.div>
+                        )}
+                    </div>
+
+                    {/* Simple Event Popover */}
+                    <AnimatePresence>
+                        {showPopover && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                className="absolute z-50 w-[300px] event-popover"
+                                style={{ top: popoverPosition.top, left: popoverPosition.left }}
+                            >
+                                <div className="bg-white rounded-2xl shadow-2xl border border-surface-200 overflow-hidden">
+                                    {/* Color bar top */}
+                                    <div className={`h-2 ${selectedColor.bg}`} />
+
+                                    <div className="p-4">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                                                {weekDates[selectionStart?.day || 0]?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                            </span>
+                                            <button
+                                                onClick={() => {
+                                                    setShowPopover(false);
+                                                    setSelectionStart(null);
+                                                    setSelectionEnd(null);
+                                                }}
+                                                className="p-1 rounded-lg hover:bg-surface-100 transition-colors"
+                                            >
+                                                <X size={16} className="text-surface-400" />
+                                            </button>
+                                        </div>
+
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            placeholder="Event name"
+                                            value={eventData.title}
+                                            onChange={(e) => setEventData({ ...eventData, title: e.target.value })}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                                            className="w-full text-lg font-semibold text-surface-900 placeholder:text-surface-300 border-0 border-b-2 border-surface-200 focus:border-primary-500 outline-none pb-2 mb-3 bg-transparent"
+                                        />
+
+                                        <textarea
+                                            placeholder="Add description (optional)"
+                                            value={eventData.description}
+                                            onChange={(e) => setEventData({ ...eventData, description: e.target.value })}
+                                            rows={2}
+                                            className="w-full text-sm text-surface-600 placeholder:text-surface-400 border border-surface-200 rounded-xl p-3 outline-none focus:border-primary-400 resize-none mb-4"
+                                        />
+
+                                        <button
+                                            onClick={handleCreate}
+                                            disabled={!eventData.title.trim() || loading}
+                                            className={`w-full py-3 rounded-xl font-semibold text-white transition-all ${selectedColor.bg} hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg`}
+                                        >
+                                            {loading ? (
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+                                            ) : (
+                                                'Create Event'
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {/* Hint */}
+                <div className="mt-4 text-center text-sm text-surface-500">
+                    Click and drag on the calendar to select a time slot
                 </div>
             </div>
         </div>

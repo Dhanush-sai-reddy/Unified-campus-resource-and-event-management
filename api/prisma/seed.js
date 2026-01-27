@@ -74,35 +74,9 @@ async function main() {
 
     console.log('✅ Created clubs');
 
-    // 3. Create Events
-    await prisma.event.create({
-        data: {
-            title: 'HackOverflow 2026',
-            description: 'A 7-day intensive online hackathon.',
-            date: new Date('2026-01-25T09:00:00Z'),
-            location: 'Main Auditorium',
-            budget: 5000,
-            status: 'APPROVED',
-            isMultiDay: true,
-            organizerId: organizer.id,
-            clubId: codingClub.id,
-        },
-    });
-
-    await prisma.event.create({
-        data: {
-            title: 'AI Workshop',
-            description: 'Introduction to GenAI models.',
-            date: new Date('2026-02-10T14:00:00Z'),
-            location: 'Lecture Hall 101',
-            budget: 200,
-            status: 'PENDING',
-            organizerId: organizer.id,
-            clubId: aiSociety.id,
-        },
-    });
-
-    console.log('✅ Created events');
+    // 3. Clear Events (Empty state for admin manual entry)
+    await prisma.event.deleteMany({});
+    console.log('✅ Cleared all events (Ready for manual entry)');
 
     // 4. Create Resources
     const resources = [

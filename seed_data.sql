@@ -14,7 +14,11 @@ ON CONFLICT (name) DO NOTHING;
 -- Events
 INSERT INTO "Event" (id, title, description, date, location, budget, status, "isMultiDay", "organizerId", "clubId", "updatedAt") VALUES
 ('e1', 'HackOverflow 2026', 'A 7-day intensive online hackathon.', '2026-01-25 09:00:00', 'Main Auditorium', 5000, 'APPROVED', true, 'u2', 'c1', NOW()),
-('e2', 'AI Workshop', 'Introduction to GenAI models.', '2026-02-10 14:00:00', 'Lecture Hall 101', 200, 'PENDING', false, 'u2', 'c2', NOW())
+('e2', 'AI Workshop', 'Introduction to GenAI models.', '2026-02-10 14:00:00', 'Lecture Hall 101', 200, 'PENDING', false, 'u2', 'c2', NOW()),
+('e3', 'Herogasm', 'An exclusive party on wheels.', '2026-03-15 20:00:00', 'Campus Bus', 10000, 'APPROVED', false, 'u2', 'c1', NOW()),
+('e4', 'Think and Purge', 'Philosophy meets debugging.', '2026-04-01 18:00:00', 'Computer Lab 1', 500, 'APPROVED', false, 'u2', 'c2', NOW()),
+('e5', 'Late Night Coding', 'Caffeine and code until sunrise.', '2026-04-05 22:00:00', 'Computer Lab 1', 100, 'APPROVED', false, 'u2', 'c1', NOW()),
+('e6', 'Morning Yoga', 'Stretch before you stress.', '2026-04-10 07:00:00', 'Main Auditorium', 0, 'APPROVED', false, 'u3', 'c1', NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Resources (matching Prisma schema)
