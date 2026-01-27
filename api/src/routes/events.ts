@@ -79,32 +79,74 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// Check for booking conflicts (duplicated from resources.ts)
+async function hasConflict(resourceId: string, startTime: Date, endTime: Date) {
+    const conflicting = await prisma.resourceBooking.findFirst({
+        where: {
+            resourceId,
+            status: { in: ['PENDING', 'APPROVED'] },
+            OR: [
+                { startTime: { lt: endTime }, endTime: { gt: startTime } },
+            ],
+        },
+    });
+    return conflicting !== null;
+}
+
 // Create event
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const { title, description, date, endDate, location, budget, clubId, isMultiDay } = req.body;
+        const { title, description, date, endDate, location, budget, clubId, isMultiDay, resourceId } = req.body;
+
+        const start = new Date(date);
+        const end = endDate ? new Date(endDate) : new Date(start.getTime() + 60 * 60 * 1000);
+
+        // If resourceId is provided, check for conflicts
+        let bookingData = undefined;
+        if (resourceId) {
+            const conflict = await hasConflict(resourceId, start, end);
+            if (conflict) {
+                return res.status(409).json({ error: 'Selected time slot conflicts with an existing booking' });
+            }
+
+            const resource = await prisma.resource.findUnique({ where: { id: resourceId } });
+            if (!resource) return res.status(404).json({ error: 'Resource not found' });
+
+            bookingData = {
+                create: {
+                    resourceId,
+                    userId: req.userId!,
+                    title,
+                    startTime: start,
+                    endTime: end,
+                    status: resource.requiresApproval ? 'PENDING' : 'APPROVED',
+                }
+            };
+        }
 
         const event = await prisma.event.create({
             data: {
                 title,
                 description,
-                date: new Date(date),
-                endDate: endDate ? new Date(endDate) : null,
-                location,
+                date: start,
+                endDate: end,
+                location: location || (resourceId ? 'Resource Booked' : ''),
                 budget: parseFloat(budget) || 0,
                 isMultiDay: isMultiDay || false,
                 organizerId: req.userId!,
                 clubId,
                 status: 'DRAFT',
+                ...(bookingData && { resourceBookings: bookingData }),
             },
             include: {
                 organizer: { select: { id: true, name: true } },
                 club: { select: { id: true, name: true } },
+                resourceBookings: true
             },
         });
 
         // Audit log
-        await auditLog('event_created', { eventId: event.id, title, userId: req.userId });
+        await auditLog('event_created', { eventId: event.id, title, userId: req.userId, resourceId });
 
         // Kafka
         const { publishEvent } = require('../services/producer');
@@ -139,6 +181,25 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
         res.json(event);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update event' });
+    }
+});
+
+// Delete event
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const event = await prisma.event.findUnique({ where: { id: req.params.id } });
+        if (!event) return res.status(404).json({ error: 'Event not found' });
+
+        if (event.organizerId !== req.userId && req.userRole !== 'ADMIN') {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+
+        await prisma.event.delete({ where: { id: req.params.id } });
+        await auditLog('event_deleted', { eventId: req.params.id, userId: req.userId });
+
+        res.json({ message: 'Event deleted' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete event' });
     }
 });
 

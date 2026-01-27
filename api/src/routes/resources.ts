@@ -285,6 +285,67 @@ router.get('/bookings/my', authenticateToken, async (req: AuthRequest, res: Resp
     }
 });
 
+// Update booking (e.g. reschedule)
+router.put('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { startTime, endTime, title, purpose } = req.body;
+
+        const booking = await prisma.resourceBooking.findUnique({ where: { id: req.params.id } });
+        if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+        // Authorization
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (booking.userId !== req.userId && user?.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+
+        // Conflict check if time changed
+        if (startTime && endTime) {
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            if (await hasConflict(booking.resourceId, start, end, booking.id)) {
+                return res.status(409).json({ error: 'Time slot conflict' });
+            }
+        }
+
+        const updated = await prisma.resourceBooking.update({
+            where: { id: req.params.id },
+            data: {
+                startTime: startTime ? new Date(startTime) : undefined,
+                endTime: endTime ? new Date(endTime) : undefined,
+                title,
+                purpose
+            }
+        });
+
+        await auditLog('booking_updated', { bookingId: booking.id, userId: req.userId });
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update booking' });
+    }
+});
+
+// Delete booking
+router.delete('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const booking = await prisma.resourceBooking.findUnique({ where: { id: req.params.id } });
+        if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+        // Authorization
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (booking.userId !== req.userId && user?.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+
+        await prisma.resourceBooking.delete({ where: { id: req.params.id } });
+        await auditLog('booking_deleted', { bookingId: req.params.id, userId: req.userId });
+
+        res.json({ message: 'Booking deleted' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete booking' });
+    }
+});
+
 // Approve booking (admin only)
 router.post('/bookings/:bookingId/approve', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {

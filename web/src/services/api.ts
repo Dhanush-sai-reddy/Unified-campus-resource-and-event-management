@@ -68,6 +68,25 @@ export const api = {
         return response.json();
     },
 
+    updateEvent: async (id: string, data: Partial<Event>) => {
+        const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to update event');
+        return response.json();
+    },
+
+    deleteEvent: async (id: string) => {
+        const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to delete event');
+        return response.json();
+    },
+
     createBooking: async (resourceId: string, data: Partial<Booking>) => {
         const response = await fetch(`${API_BASE_URL}/resources/${resourceId}/book`, {
             method: 'POST',
@@ -78,6 +97,25 @@ export const api = {
             const err = await response.json();
             throw new Error(err.error || 'Failed to create booking');
         }
+        return response.json();
+    },
+
+    updateBooking: async (id: string, data: Partial<Booking>) => {
+        const response = await fetch(`${API_BASE_URL}/resources/bookings/${id}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to update booking');
+        return response.json();
+    },
+
+    deleteBooking: async (id: string) => {
+        const response = await fetch(`${API_BASE_URL}/resources/bookings/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to delete booking');
         return response.json();
     },
 

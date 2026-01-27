@@ -38,6 +38,7 @@ export interface Event {
   status: EventStatus;
   participants: number;
   budget: number;
+  resourceId?: string;
 }
 
 export enum ResourceType {

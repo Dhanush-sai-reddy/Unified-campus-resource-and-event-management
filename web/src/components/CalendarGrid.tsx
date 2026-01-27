@@ -35,14 +35,19 @@ interface CalendarGridProps {
     onEventCreate: (data: { title: string, startDate: string, endDate: string, startHour: number, endHour: number, resourceId?: string }) => Promise<void>;
     onDeleteEvent?: (id: string) => void;
     onEventClick?: (event: CalendarEvent) => void;
+    onEventUpdate?: (event: CalendarEvent) => Promise<void>;
+    disableQuickAdd?: boolean;
 }
 
-export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, bookings, resources, onEventCreate, onDeleteEvent, onEventClick }: CalendarGridProps) {
+export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, bookings, resources, onEventCreate, onDeleteEvent, onEventClick, onEventUpdate, disableQuickAdd }: CalendarGridProps) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
 
     // Interaction State
     const [draggingEvent, setDraggingEvent] = useState<string | null>(null);
     const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom' } | null>(null);
+    // Track original event for diffing changes
+    const [dragStartSnapshot, setDragStartSnapshot] = useState<CalendarEvent | null>(null);
+
     const [isSelecting, setIsSelecting] = useState(false);
     const [selectionStart, setSelectionStart] = useState<{ day: number, hour: number } | null>(null);
     const [selectionEnd, setSelectionEnd] = useState<{ day: number, hour: number } | null>(null);
@@ -124,7 +129,8 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                                 day: i,
                                 color: color,
                                 location: e.location,
-                                originalEvent: e
+                                originalEvent: e,
+                                resourceId: e.resourceId
                             });
                         }
                     }
@@ -215,6 +221,10 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             e.stopPropagation();
             if (edge) setResizingEvent({ id: eventId, edge });
             else setDraggingEvent(eventId);
+
+            // Snapshot for update check
+            const ev = events.find(e => e.id === eventId);
+            if (ev) setDragStartSnapshot(ev);
         } else {
             const coords = getGridCoordinates(e);
             if (coords) {
@@ -230,8 +240,6 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         if (!coords) return;
 
         if (resizingEvent) {
-            // Resize logic (omitted for brevity in first pass, or copied)
-            // Simplified visual update:
             setEvents(prev => prev.map(ev => {
                 if (ev.id !== resizingEvent.id) return ev;
                 if (resizingEvent.edge === 'top') {
@@ -266,7 +274,6 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
 
             const dbEndH = endH + 1;
 
-            // Determine dates/resource based on viewMode
             let startDateStr = '';
             let endDateStr = '';
             let rId = undefined;
@@ -277,44 +284,64 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                 startDateStr = startDateObj.toISOString().split('T')[0];
                 endDateStr = endDateObj.toISOString().split('T')[0];
             } else {
-                // Resources View
-                // Date is currentDate
                 startDateStr = currentDate.toISOString().split('T')[0];
                 endDateStr = currentDate.toISOString().split('T')[0];
                 const resource = resources[startD];
                 if (resource) rId = resource.id;
             }
 
-            setNewEvent({
+            const eventData = {
                 title: '',
                 startDate: startDateStr,
                 endDate: endDateStr,
                 startHour: startH,
                 endHour: dbEndH,
                 resourceId: rId || ''
-            });
+            };
+
+            setNewEvent(eventData);
 
             if (calendarRef.current) {
-                // Simple positioning logic
-                // ... (simplified for brevity)
                 const rect = calendarRef.current.getBoundingClientRect();
                 const visibleCols = viewMode === 'resources' ? resources.length : 7;
                 const cellWidth = (rect.width - 60) / visibleCols;
                 const HEADER_HEIGHT = 50;
 
                 let left = 60 + (endD + 1) * cellWidth + 20;
-                // If popover would go off screen
                 if (left + 280 > rect.width) {
-                    left = 60 + (endD * cellWidth) - 290; // Flip to left side
+                    left = 60 + (endD * cellWidth) - 290;
                 }
                 const top = (dbEndH - 8) * 60 + HEADER_HEIGHT - 60;
 
-                setPopoverPosition({ top, left });
-                setShowQuickAdd(true);
+
+                if (disableQuickAdd) {
+                    onEventCreate(eventData);
+                } else {
+                    setPopoverPosition({ top, left });
+                    setShowQuickAdd(true);
+                }
             }
         }
+
+        // Handle Drop for Update
+        if ((draggingEvent || resizingEvent) && onEventUpdate) {
+            const eventId = draggingEvent || resizingEvent?.id;
+            const updatedEvent = events.find(e => e.id === eventId);
+
+            if (updatedEvent && dragStartSnapshot) {
+                const s = dragStartSnapshot;
+                const u = updatedEvent;
+                const hasChanged = u.startHour !== s.startHour || u.endHour !== s.endHour || u.day !== s.day;
+
+                if (hasChanged) {
+                    onEventUpdate(updatedEvent);
+                }
+            }
+        }
+
         setDraggingEvent(null);
         setResizingEvent(null);
+        setDragStartSnapshot(null);
         setIsSelecting(false);
     };
 
@@ -327,25 +354,37 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
     // Render Overlay Helper
     const renderSelectionOverlay = () => {
         if (!isSelecting || !selectionStart || !selectionEnd) return null;
-        // ... (similar logic to Calendar.tsx)
-        // Simplified:
-        let startD = Math.min(selectionStart.day, selectionEnd.day);
-        let endD = Math.max(selectionStart.day, selectionEnd.day);
-        let startH = Math.min(selectionStart.hour, selectionEnd.hour);
-        let endH = Math.max(selectionStart.hour, selectionEnd.hour);
 
-        let startCol = startD;
-        let endCol = endD;
+        const startD = Math.min(selectionStart.day, selectionEnd.day);
+        const endD = Math.max(selectionStart.day, selectionEnd.day);
+        const startH = Math.min(selectionStart.hour, selectionEnd.hour);
+        const endH = Math.max(selectionStart.hour, selectionEnd.hour);
 
-        const top = (startH - 8) * 60;
-        const height = (endH - startH + 1) * 60;
-        const colWidth = 100 / (viewMode === 'resources' ? resources.length : 7);
-        // Percent based width logic 
-        // Need to be careful with left offset (60px fixed)
-        // Let's use absolute px or better percentage logic for inner container
+        const colCount = viewMode === 'resources' ? resources.length : 7;
+        const overlays = [];
 
-        // Actually, let's just return nothing for now to save complexity or implement simple one-box
-        return null;
+        for (let d = startD; d <= endD; d++) {
+            const top = (startH - 8) * 60;
+            const height = (endH - startH + 1) * 60;
+            const left = `calc(60px + ${d} * ((100% - 60px) / ${colCount}))`;
+            const width = `calc((100% - 60px) / ${colCount})`;
+
+            overlays.push(
+                <div
+                    key={d}
+                    className="absolute bg-primary-500/20 border-2 border-primary-500 rounded-md pointer-events-none z-10"
+                    style={{
+                        top: `${top}px`,
+                        height: `${height}px`,
+                        left: left,
+                        width: `calc(${width} - 4px)`,
+                        marginLeft: '2px'
+                    }}
+                />
+            );
+        }
+
+        return <>{overlays}</>;
     };
 
     return (
@@ -385,6 +424,9 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                         ))}
                     </div>
                 ))}
+
+                {/* Selection Overlay */}
+                {renderSelectionOverlay()}
 
                 {/* Events */}
                 {events.map((event) => {

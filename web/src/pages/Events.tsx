@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Users, Search, Grid, List, ChevronRight, X, MessageCircle } from 'lucide-react';
 import { Event, EventStatus, Booking } from '../types';
-import { getEvents, getBookings } from '../services/mockService';
+import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 
@@ -96,7 +96,7 @@ export default function Events() {
         setLoadingResources(true);
         try {
 
-            const allBookings = await getBookings();
+            const allBookings = await api.getBookings();
             const relevant = allBookings.filter(b => (b as any).eventName === event.title || b.title === event.title || b.eventId === event.id); // Check variations for mock data compatibility
             setEventBookings(relevant);
         } catch (e) {
@@ -109,8 +109,12 @@ export default function Events() {
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-            const data = await getEvents();
-            setEvents(data);
+            try {
+                const data = await api.getEvents();
+                setEvents(data);
+            } catch (err) {
+                console.error("Failed to fetch events", err);
+            }
             setLoading(false);
         };
         fetchData();
@@ -138,7 +142,13 @@ export default function Events() {
                     <h1 className="text-2xl font-display font-bold text-surface-900">Events</h1>
                     <p className="text-surface-500 mt-1">Discover and manage campus events</p>
                 </div>
-
+                <button
+                    onClick={() => navigate('/events/new')}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-colors font-medium flex items-center gap-2"
+                >
+                    <Calendar size={18} />
+                    Create Event
+                </button>
             </div>
 
             {/* Filters */}
@@ -314,6 +324,22 @@ export default function Events() {
                                     >
                                         <MessageCircle size={16} />
                                         Join Event Chat
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (confirm('Are you sure you want to delete this event?')) {
+                                                try {
+                                                    await api.deleteEvent(selectedEvent.id);
+                                                    setEvents(events.filter(e => e.id !== selectedEvent.id));
+                                                    setSelectedEvent(null);
+                                                } catch (err) {
+                                                    alert('Failed to delete event');
+                                                }
+                                            }
+                                        }}
+                                        className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                                    >
+                                        Delete
                                     </button>
                                     <button
                                         onClick={() => setSelectedEvent(null)}

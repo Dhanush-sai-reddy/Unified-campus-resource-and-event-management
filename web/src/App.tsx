@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
+import CreateEvent from './pages/CreateEvent';
 
 import Resources from './pages/Resources';
 import Profile from './pages/Profile';
@@ -44,6 +45,7 @@ function AppRoutes() {
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 <Route index element={<Dashboard />} />
                 <Route path="events" element={<Events />} />
+                <Route path="events/new" element={<CreateEvent />} />
 
                 <Route path="resources" element={<Resources />} />
                 <Route path="profile" element={<Profile />} />

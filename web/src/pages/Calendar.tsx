@@ -124,6 +124,13 @@ export default function Calendar() {
                     <p className="text-surface-500 mt-1">Plan and manage your campus events</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => navigate('/events/new')}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-colors font-medium flex items-center gap-2"
+                    >
+                        <CalendarIcon size={18} />
+                        Create
+                    </button>
                     {/* View Toggle */}
                     <div className="flex bg-surface-100 p-1 rounded-xl">
                         <button
@@ -208,6 +215,49 @@ export default function Calendar() {
                         setEventBookings(relatedBookings);
                     } else {
                         setEventBookings([]);
+                    }
+                }}
+                onEventUpdate={async (event) => {
+                    try {
+                        if (viewMode === 'events') {
+                            if (!event.originalEvent) return;
+
+                            const dayDate = weekDates[event.day];
+                            const start = new Date(dayDate);
+                            start.setHours(event.startHour, 0, 0, 0);
+
+                            const end = new Date(dayDate);
+                            end.setHours(event.endHour, 0, 0, 0);
+
+                            await api.updateEvent(event.originalEvent.id, {
+                                date: start.toISOString(),
+                                endDate: end.toISOString()
+                            });
+
+                            const [fetchedEvents] = await Promise.all([api.getEvents()]);
+                            setDbEvents(fetchedEvents);
+                        } else {
+                            // Resource View
+                            const resource = resources[event.day];
+                            if (!resource) return;
+
+                            const start = new Date(currentDate);
+                            start.setHours(event.startHour, 0, 0, 0);
+
+                            const end = new Date(currentDate);
+                            end.setHours(event.endHour, 0, 0, 0);
+
+                            await api.updateBooking(event.id, {
+                                startTime: start.toISOString(),
+                                endTime: end.toISOString(),
+                                resourceId: resource.id
+                            });
+
+                            const [fetchedBookings] = await Promise.all([api.getBookings({ upcoming: false })]);
+                            setBookings(fetchedBookings);
+                        }
+                    } catch (err) {
+                        console.error("Failed to update event", err);
                     }
                 }}
             />
