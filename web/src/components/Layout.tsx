@@ -9,7 +9,7 @@ import { getNotifications, markNotificationRead, Notification } from '../service
 const pageTitles: Record<string, string> = {
     '/': 'Dashboard',
     '/events': 'Events',
-    '/events/new': 'Create Event',
+
     '/resources': 'Resources',
     '/clubs': 'Clubs',
     '/profile': 'Profile',

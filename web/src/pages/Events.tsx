@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, MapPin, Users, Plus, Search, Grid, List, ChevronRight, X, MessageCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, Search, Grid, List, ChevronRight, X, MessageCircle } from 'lucide-react';
 import { Event, EventStatus, Booking } from '../types';
 import { getEvents, getBookings } from '../services/mockService';
 import { useAuth } from '../context/AuthContext';
@@ -123,7 +123,7 @@ export default function Events() {
         return matchesStatus && matchesSearch;
     });
 
-    const canCreateEvent = user?.role === UserRole.ADMIN || user?.role === UserRole.ORGANIZER;
+
 
     const container = {
         hidden: { opacity: 0 },
@@ -138,15 +138,7 @@ export default function Events() {
                     <h1 className="text-2xl font-display font-bold text-surface-900">Events</h1>
                     <p className="text-surface-500 mt-1">Discover and manage campus events</p>
                 </div>
-                {canCreateEvent && (
-                    <Link
-                        to="/events/new"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/25"
-                    >
-                        <Plus size={18} />
-                        Create Event
-                    </Link>
-                )}
+
             </div>
 
             {/* Filters */}

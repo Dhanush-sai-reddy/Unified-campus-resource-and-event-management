@@ -26,7 +26,7 @@ function StatCard({ title, value, change, changeType = 'neutral', icon, color }:
                     <p className="text-3xl font-bold text-surface-900 mt-1">{value}</p>
                     {change && (
                         <p className={`text-sm mt-2 font-medium ${changeType === 'positive' ? 'text-green-600' :
-                                changeType === 'negative' ? 'text-red-600' : 'text-surface-500'
+                            changeType === 'negative' ? 'text-red-600' : 'text-surface-500'
                             }`}>
                             {change}
                         </p>
@@ -124,10 +124,10 @@ export default function Dashboard() {
                         </p>
                     </div>
                     <Link
-                        to={isOrganizer ? '/events/new' : '/events'}
+                        to={isOrganizer ? '/calendar' : '/events'}
                         className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/25"
                     >
-                        {isOrganizer ? 'Create Event' : 'Browse Events'}
+                        {isOrganizer ? 'Manage Calendar' : 'Browse Events'}
                         <ArrowRight size={18} />
                     </Link>
                 </div>
