@@ -74,10 +74,11 @@ export default function CreateEvent() {
 
         setIsSubmitting(true);
         try {
-            const start = new Date(draftEvent.startDate);
+            // Parse as local time to avoid UTC shifts
+            const start = new Date(`${draftEvent.startDate}T00:00:00`);
             start.setHours(draftEvent.startHour, 0, 0, 0);
 
-            const end = new Date(draftEvent.endDate);
+            const end = new Date(`${draftEvent.endDate}T00:00:00`);
             end.setHours(draftEvent.endHour, 0, 0, 0);
 
             await api.createEvent({
@@ -127,7 +128,7 @@ export default function CreateEvent() {
                             <p className={`font-semibold ${selectedResourceId === res.id ? 'text-primary-900' : 'text-surface-900'}`}>
                                 {res.name}
                             </p>
-                            <p className="text-xs text-surface-500 mt-1 capitalize">{res.type.toLowerCase()}</p>
+                            <p className="text-xs text-surface-500 mt-1 capitalize">{res.type?.toLowerCase() || 'resource'}</p>
                         </button>
                     ))}
                 </div>

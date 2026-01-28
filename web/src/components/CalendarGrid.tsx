@@ -441,7 +441,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                             key={event.id}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className={`absolute rounded-md ${event.color} text-white p-1 text-xs overflow-hidden shadow-sm cursor-pointer z-10 hover:z-20 border border-white/20`}
+                            className={`absolute rounded-md ${event.color} text-white p-1 text-xs overflow-hidden shadow-sm cursor-pointer z-20 hover:z-30 border border-white/20`}
                             style={{ top, height, left, width: `calc((100% - 60px) / ${colCount} - 4px)`, marginLeft: '2px' }}
                             onClick={(e) => {
                                 e.stopPropagation();

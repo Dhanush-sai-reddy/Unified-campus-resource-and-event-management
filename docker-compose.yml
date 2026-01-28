@@ -12,6 +12,7 @@ services:
       - "5436:5432" # Host exposed port (different from 5435 to be safe)
     volumes:
       - timescaledb_data_final:/var/lib/postgresql/data
+      - ./init_node_db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
