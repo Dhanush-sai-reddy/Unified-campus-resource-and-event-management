@@ -14,8 +14,18 @@ import { connectBrokers, redisClient, brokersConnected } from './config/brokers'
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const parseCorsOrigins = (value?: string) => {
+    if (!value) return '*';
+    const trimmed = value.trim();
+    if (trimmed === '*') return '*';
+    return trimmed.split(',').map((o) => o.trim()).filter(Boolean);
+};
+
+const corsOrigin = parseCorsOrigins(process.env.CORS_ORIGIN);
+const socketCorsOrigin = parseCorsOrigins(process.env.SOCKET_CORS_ORIGIN || process.env.CORS_ORIGIN);
+
 app.use(cors({
-    origin: '*',
+    origin: corsOrigin as any,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -46,7 +56,7 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: socketCorsOrigin as any,
         methods: ["GET", "POST"]
     }
 });
@@ -127,8 +137,8 @@ const startServer = async () => {
     }
 
     server.listen(PORT, () => {
-        console.log(`🚀 Campus API running on port ${PORT}`);
-        console.log(`🔌 Socket.io ready`);
+        console.log(`Campus API running on port ${PORT}`);
+        console.log(`Socket.io ready`);
     });
 };
 

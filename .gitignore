@@ -22,3 +22,18 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Local artifacts
+build_log.txt
+hash.txt
+*.log
+
+# Go binaries
+*.exe
+*.test
+scheduler/main
+scheduler/scheduler
+
+# Testing/Verification scripts (optional)
+verify_creation.js
+verify_system.ps1

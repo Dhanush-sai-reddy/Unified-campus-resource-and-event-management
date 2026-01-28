@@ -35,7 +35,7 @@ func main() {
 		{"Computing Lab 1", "ROOM", 60, "AVAILABLE"},
 	}
 
-	fmt.Println("🌱 Seeding resources...")
+	fmt.Println("Seeding resources...")
 	for _, r := range resources {
 		var count int
 		err := conn.QueryRow(context.Background(), "SELECT COUNT(*) FROM resources WHERE name=$1", r.Name).Scan(&count)
@@ -51,7 +51,7 @@ func main() {
 			if err != nil {
 				log.Printf("Error inserting resource %s: %v", r.Name, err)
 			} else {
-				fmt.Printf("✅ Created %s\n", r.Name)
+				fmt.Printf("Created %s\n", r.Name)
 			}
 		}
 	}

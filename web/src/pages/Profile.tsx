@@ -125,7 +125,7 @@ export default function Profile() {
                                     </div>
                                     <div>
                                         <p className="font-medium text-surface-900">{club.name}</p>
-                                        <p className="text-sm text-surface-500">{club.role} • Since {club.since}</p>
+                                        <p className="text-sm text-surface-500">{club.role} | Since {club.since}</p>
                                     </div>
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${club.role === 'Lead'

@@ -143,7 +143,7 @@ export default function CreateEvent() {
                 {selectedResource && (
                     <div className="mt-3 flex items-center gap-2 text-sm text-surface-500 bg-surface-50 p-2 rounded-lg inline-flex">
                         <Info size={16} />
-                        <span>Capacity: {selectedResource.capacity || 'N/A'} • {selectedResource.location || 'No location info'}</span>
+                        <span>Capacity: {selectedResource.capacity || 'N/A'} | {selectedResource.location || 'No location info'}</span>
                     </div>
                 )}
             </div>

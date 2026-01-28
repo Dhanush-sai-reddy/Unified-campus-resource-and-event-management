@@ -375,7 +375,7 @@ export default function Login() {
                 transition={{ delay: 0.8 }}
                 className="mt-12 text-slate-600 text-sm relative z-10"
             >
-                HackOverflow 2026 • Demo Mode
+                HackOverflow 2026 | Demo Mode
             </motion.p>
         </div>
     );

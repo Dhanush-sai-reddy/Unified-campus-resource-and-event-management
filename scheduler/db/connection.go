@@ -32,7 +32,7 @@ func Connect() error {
 		return fmt.Errorf("failed to initialize tables: %w", err)
 	}
 
-	fmt.Println("✅ Connected to TimescaleDB")
+	fmt.Println("Connected to TimescaleDB")
 	return nil
 }
 

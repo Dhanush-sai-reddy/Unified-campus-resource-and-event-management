@@ -17,7 +17,7 @@ async function initAuditRepo() {
             await git.init();
             await git.addConfig('user.email', 'audit@campus-system.local');
             await git.addConfig('user.name', 'Campus System Audit');
-            console.log('✅ Audit git repository initialized');
+            console.log('Audit git repository initialized');
         }
     } catch (error) {
         console.error('Failed to initialize audit repo:', error);
@@ -67,7 +67,7 @@ export async function auditLog(action: string, data: any): Promise<void> {
             await git.commit(`${action}: ${JSON.stringify(data).slice(0, 50)}...`);
         }
 
-        console.log(`📝 Audit: ${action}`);
+        console.log(`Audit: ${action}`);
     } catch (error) {
         console.error('Audit log error:', error);
     }

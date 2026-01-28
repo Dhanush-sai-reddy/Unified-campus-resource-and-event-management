@@ -105,7 +105,7 @@ export default function Register() {
                 </div>
 
                 <div className="relative z-10 text-primary-200 text-sm">
-                    © 2026 CampusSys. All rights reserved.
+                    (c) 2026 CampusSys. All rights reserved.
                 </div>
             </div>
 

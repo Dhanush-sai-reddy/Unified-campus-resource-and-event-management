@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-import { Send, Hash, Users, MessageCircle } from 'lucide-react';
+import { Send, Hash, Users, MessageCircle, Globe, Calendar, Code, Brain } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
 import { api } from '../services/api';
@@ -20,15 +20,15 @@ interface ChatRoom {
     id: string;
     name: string;
     type: 'global' | 'event' | 'club';
-    icon: string;
+    icon: React.ReactNode;
 }
 
 const defaultRooms: ChatRoom[] = [
-    { id: 'global', name: 'Campus Chat', type: 'global', icon: '🌐' },
-    { id: 'event_hackoverflow', name: 'HackOverflow 2026', type: 'event', icon: '💻' },
-    { id: 'event_ai_workshop', name: 'AI Workshop', type: 'event', icon: '🤖' },
-    { id: 'club_coding', name: 'Coding Club', type: 'club', icon: '👨‍💻' },
-    { id: 'club_ai', name: 'AI Society', type: 'club', icon: '🧠' },
+    { id: 'global', name: 'Campus Chat', type: 'global', icon: <Globe size={18} /> },
+    { id: 'event_hackoverflow', name: 'HackOverflow 2026', type: 'event', icon: <Code size={18} /> },
+    { id: 'event_ai_workshop', name: 'AI Workshop', type: 'event', icon: <Brain size={18} /> },
+    { id: 'club_coding', name: 'Coding Club', type: 'club', icon: <Code size={18} /> },
+    { id: 'club_ai', name: 'AI Society', type: 'club', icon: <Brain size={18} /> },
 ];
 
 export default function Chat() {
@@ -51,7 +51,7 @@ export default function Chat() {
                 id: `event_${eventId}`,
                 name: eventName,
                 type: 'event',
-                icon: '📅'
+                icon: <Calendar size={18} />
             };
             setRooms(prev => {
                 if (!prev.find(r => r.id === eventRoom.id)) {
@@ -174,7 +174,7 @@ export default function Chat() {
                             <p className="text-xs text-surface-500 flex items-center gap-1">
                                 <Users size={12} />
                                 <span className="capitalize">{currentRoomInfo.type} chat</span>
-                                <span className="mx-1">•</span>
+                                <span className="mx-1">|</span>
                                 <span className="text-green-600">Live</span>
                             </p>
                         </div>

@@ -819,8 +819,8 @@ export default function Resources() {
 
                                 <div className="flex justify-between items-center gap-3 mt-6 pt-4 border-t border-surface-100">
                                     {selectedResource?.requiresApproval && user?.role !== 'ADMIN' && (
-                                        <p className="text-xs text-surface-500 flex-1">
-                                            ⏳ This resource requires admin approval
+                                        <p className="text-xs text-surface-500 flex-1 flex items-center gap-1">
+                                            <Clock size={14} /> This resource requires admin approval
                                         </p>
                                     )}
                                     <div className="flex gap-3 ml-auto">
