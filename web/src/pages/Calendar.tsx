@@ -1,17 +1,22 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Event, Booking, Resource } from '../types';
 import { api } from '../services/api';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Clock, MapPin, X, Calendar as CalendarIcon, Server, Users, MoreHorizontal } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Clock, MapPin, X, Calendar as CalendarIcon, Server, Users, MessageCircle } from 'lucide-react';
 import CalendarGrid, { CalendarEvent } from '../components/CalendarGrid';
+import { useAuth } from '../context/AuthContext';
 
 // Removed unused constants and interfaces
 
 export default function Calendar() {
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [viewMode, setViewMode] = useState<'events' | 'resources'>('events');
+    const [searchParams] = useSearchParams();
+    const [viewMode, setViewMode] = useState<'events' | 'resources'>(
+        (searchParams.get('view') as 'events' | 'resources') || 'events'
+    );
 
     // Data state
     const [dbEvents, setDbEvents] = useState<Event[]>([]);
@@ -20,9 +25,6 @@ export default function Calendar() {
     const [eventBookings, setEventBookings] = useState<Booking[]>([]);
 
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-
-    // const calendarRef = useRef<HTMLDivElement>(null); // Removed
-    // const quickAddRef = useRef<HTMLDivElement>(null); // Removed
 
     // Initial fetch
     useEffect(() => {
@@ -67,10 +69,6 @@ export default function Calendar() {
 
     const goToToday = () => setCurrentDate(new Date());
 
-    // Removed helper functions (getGridCoordinates, handleMouseDown, handleMouseMove, handleMouseUp, renderSelectionOverlay, handleQuickCreate)
-
-
-
     const handleDeleteEvent = (id: string) => {
         // setEvents([]); // Removed
         const updated = dbEvents.filter(e => e.id !== id);
@@ -85,11 +83,6 @@ export default function Calendar() {
 
     const formatDate = (date: Date) => {
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    };
-
-    const isToday = (date: Date) => {
-        const today = new Date();
-        return date.toDateString() === today.toDateString();
     };
 
     // Helper to get capacity bar for details modal
@@ -124,13 +117,15 @@ export default function Calendar() {
                     <p className="text-surface-500 mt-1">Plan and manage your campus events</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => navigate('/events/new')}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-colors font-medium flex items-center gap-2"
-                    >
-                        <CalendarIcon size={18} />
-                        Create
-                    </button>
+                    {user?.role !== 'PARTICIPANT' && (
+                        <button
+                            onClick={() => navigate('/events/new')}
+                            className="px-4 py-2 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-colors font-medium flex items-center gap-2"
+                        >
+                            <CalendarIcon size={18} />
+                            Create
+                        </button>
+                    )}
                     {/* View Toggle */}
                     <div className="flex bg-surface-100 p-1 rounded-xl">
                         <button
@@ -177,6 +172,7 @@ export default function Calendar() {
 
             {/* Calendar Grid */}
             <CalendarGrid
+                readOnly={user?.role === 'PARTICIPANT'}
                 viewMode={viewMode}
                 currentDate={currentDate}
                 events={dbEvents}
@@ -333,9 +329,23 @@ export default function Calendar() {
                                 </div>
                             )}
 
+                            {/* Chat Button */}
+                            <button
+                                onClick={() => {
+                                    const eventId = selectedEvent.originalEvent?.id;
+                                    if (eventId) {
+                                        navigate(`/chat?event=${eventId}&name=${encodeURIComponent(selectedEvent.title)}`);
+                                    }
+                                }}
+                                className="w-full mt-4 px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors flex items-center justify-center gap-2"
+                            >
+                                <MessageCircle size={16} />
+                                Join Event Chat
+                            </button>
+
                             <button
                                 onClick={() => handleDeleteEvent(selectedEvent.id)}
-                                className="w-full mt-4 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                                className="w-full mt-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
                             >
                                 Delete Event
                             </button>

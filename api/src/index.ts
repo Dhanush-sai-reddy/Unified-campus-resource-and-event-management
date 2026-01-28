@@ -25,6 +25,10 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'campus-api', timestamp: new Date().toISOString() });
 });
 
+app.get('/', (req, res) => {
+    res.send('Campus API is running. Access endpoints via /api/...');
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/clubs', clubRoutes);

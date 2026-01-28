@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Resource, Booking } from '../types';
+import { useAuth } from '../context/AuthContext';
 import CalendarGrid, { CalendarEvent } from '../components/CalendarGrid';
 import { ChevronLeft, Info, Clock, Calendar as CalendarIcon, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CreateEvent() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [resources, setResources] = useState<Resource[]>([]);
     const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
     const [resourceBookings, setResourceBookings] = useState<Booking[]>([]);
@@ -39,6 +41,12 @@ export default function CreateEvent() {
         };
         fetchResources();
     }, []);
+
+    useEffect(() => {
+        if (user && user.role === 'PARTICIPANT') {
+            navigate('/calendar');
+        }
+    }, [user, navigate]);
 
     useEffect(() => {
         if (!selectedResourceId) return;

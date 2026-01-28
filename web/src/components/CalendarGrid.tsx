@@ -37,9 +37,10 @@ interface CalendarGridProps {
     onEventClick?: (event: CalendarEvent) => void;
     onEventUpdate?: (event: CalendarEvent) => Promise<void>;
     disableQuickAdd?: boolean;
+    readOnly?: boolean;
 }
 
-export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, bookings, resources, onEventCreate, onDeleteEvent, onEventClick, onEventUpdate, disableQuickAdd }: CalendarGridProps) {
+export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, bookings, resources, onEventCreate, onDeleteEvent, onEventClick, onEventUpdate, disableQuickAdd, readOnly }: CalendarGridProps) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
 
     // Interaction State
@@ -214,6 +215,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
     };
 
     const handleMouseDown = (e: React.MouseEvent, eventId?: string, edge?: 'top' | 'bottom') => {
+        if (readOnly) return;
         if ((e.target as HTMLElement).closest('.grid-header') || (e.target as HTMLElement).closest('.quick-add-popover')) return;
         if (showQuickAdd) setShowQuickAdd(false);
 

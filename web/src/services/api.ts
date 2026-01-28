@@ -36,6 +36,35 @@ export const api = {
         return response.json();
     },
 
+    createResource: async (data: any) => {
+        const response = await fetch(`${API_BASE_URL}/resources`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to create resource');
+        return response.json();
+    },
+
+    updateResource: async (id: string, data: any) => {
+        const response = await fetch(`${API_BASE_URL}/resources/${id}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to update resource');
+        return response.json();
+    },
+
+    deleteResource: async (id: string) => {
+        const response = await fetch(`${API_BASE_URL}/resources/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to delete resource');
+        return response.json();
+    },
+
     getBookings: async (params?: {
         status?: string;
         resourceId?: string;

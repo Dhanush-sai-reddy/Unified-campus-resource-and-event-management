@@ -5,7 +5,6 @@ import {
     LayoutDashboard,
     Calendar,
     CalendarDays,
-    Building2,
     Users,
     User,
     BarChart3,
@@ -30,7 +29,7 @@ const navItems: NavItem[] = [
     { label: 'Calendar', path: '/calendar', icon: <CalendarDays size={20} /> },
 
     { label: 'Chat', path: '/chat', icon: <MessageCircle size={20} /> },
-    { label: 'Resources', path: '/resources', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.ORGANIZER] },
+    { label: 'Resources', path: '/resources', icon: <CalendarDays size={20} /> },
     { label: 'Clubs', path: '/clubs', icon: <Users size={20} /> },
     { label: 'Profile', path: '/profile', icon: <User size={20} /> },
     { label: 'Analytics', path: '/analytics', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN] },

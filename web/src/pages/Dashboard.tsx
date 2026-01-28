@@ -178,7 +178,7 @@ export default function Dashboard() {
                             title="Book a Resource"
                             description="Reserve rooms and equipment"
                             icon={<Building2 className="text-primary-600" size={20} />}
-                            to="/resources"
+                            to="/calendar?view=resources"
                             color="bg-primary-50"
                         />
                         <QuickAction

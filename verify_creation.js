@@ -47,40 +47,26 @@ async function run() {
 
         const loginData = JSON.parse(loginRes.body);
         const token = loginData.token;
-        console.log('Login successful. Token obtained.');
+        console.log('Login successful.');
 
-        console.log('2. Attempting Create Event (Multi-Day Proof)...');
-
-        const d = new Date();
-        const startStr = d.toISOString();
-        const endDate = new Date(d);
-        endDate.setDate(d.getDate() + 2); // 2 days later
-        const endStr = endDate.toISOString();
-
-        const eventPayload = JSON.stringify({
-            title: 'Multi-Day Proof',
-            description: 'This event should span 3 days.',
-            date: startStr,
-            endDate: endStr,
-            location: 'Test Location',
-            budget: 0,
-            isMultiDay: true
-        });
-
-        const createRes = await request({
+        console.log('2. Fetching Resources...');
+        const resRes = await request({
             hostname: 'localhost',
             port: 5000,
-            path: '/api/events',
-            method: 'POST',
+            path: '/api/resources',
+            method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'Content-Length': eventPayload.length
+                'Authorization': `Bearer ${token}`
             }
-        }, eventPayload);
+        });
 
-        console.log('Create Event Status:', createRes.status);
-        console.log('Response Body:', createRes.body);
+        console.log('Resources Status:', resRes.status);
+        if (resRes.status === 200) {
+            const resources = JSON.parse(resRes.body);
+            console.log('Resources found:', resources.length);
+        } else {
+            console.error('Failed to get resources:', resRes.body);
+        }
 
     } catch (err) {
         console.error('Script Error:', err);

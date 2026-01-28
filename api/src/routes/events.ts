@@ -96,6 +96,10 @@ async function hasConflict(resourceId: string, startTime: Date, endTime: Date) {
 // Create event
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+        if (req.userRole === 'PARTICIPANT') {
+            return res.status(403).json({ error: 'Students are not allowed to create events' });
+        }
+
         const { title, description, date, endDate, location, budget, clubId, isMultiDay, resourceId } = req.body;
 
         const start = new Date(date);
