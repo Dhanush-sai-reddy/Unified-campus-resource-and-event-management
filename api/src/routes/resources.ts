@@ -125,20 +125,7 @@ router.delete('/:id', authenticateToken, requireRole('ADMIN'), async (req: AuthR
     }
 });
 
-// Check for booking conflicts
-async function hasConflict(resourceId: string, startTime: Date, endTime: Date, excludeBookingId?: string) {
-    const conflicting = await prisma.resourceBooking.findFirst({
-        where: {
-            resourceId,
-            status: { in: ['PENDING', 'APPROVED'] },
-            id: excludeBookingId ? { not: excludeBookingId } : undefined,
-            OR: [
-                { startTime: { lt: endTime }, endTime: { gt: startTime } },
-            ],
-        },
-    });
-    return conflicting !== null;
-}
+import { hasConflict } from '../services/bookingService';
 
 // Get resource availability for a date range
 router.get('/:id/availability', async (req, res) => {

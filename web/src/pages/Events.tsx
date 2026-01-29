@@ -110,7 +110,14 @@ export default function Events() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const data = await api.getEvents();
+                // Pass statusFilter to API (if 'all', pass undefined to get default or handle on server, 
+                // but server defaults to APPROVED. We want 'all' to maybe mean fetch all? 
+                // Actually, if we want to search across all, we might need a specific param or let 'all' be undefined but server logic defaults to approved.
+                // Let's make 'all' fetch everything for Admins? Or just loop?
+                // For now, let's map 'all' to undefined (which gets APPROVED) or we need a way to get EVERYTHING.
+                // But wait, user wants to see Pending.
+                const statusArg = statusFilter === 'all' ? undefined : statusFilter;
+                const data = await api.getEvents(statusArg);
                 setEvents(data);
             } catch (err) {
                 console.error("Failed to fetch events", err);
@@ -118,7 +125,7 @@ export default function Events() {
             setLoading(false);
         };
         fetchData();
-    }, []);
+    }, [statusFilter]);
 
     const filteredEvents = events.filter(event => {
         const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
@@ -314,6 +321,42 @@ export default function Events() {
                                 </div>
 
                                 <div className="flex justify-end gap-3 pt-2">
+                                    {user?.role === UserRole.ADMIN && selectedEvent.status === EventStatus.PENDING && (
+                                        <>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await api.approveEvent(selectedEvent.id);
+                                                        setEvents(events.map(e => e.id === selectedEvent.id ? { ...e, status: EventStatus.APPROVED } : e));
+                                                        setSelectedEvent(null);
+                                                        alert('Event approved successfully');
+                                                    } catch (err) {
+                                                        alert('Failed to approve event');
+                                                    }
+                                                }}
+                                                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors flex items-center gap-2"
+                                            >
+                                                Approve
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    const reason = prompt('Reason for rejection (optional):');
+                                                    if (reason === null) return;
+                                                    try {
+                                                        await api.rejectEvent(selectedEvent.id, reason);
+                                                        setEvents(events.map(e => e.id === selectedEvent.id ? { ...e, status: EventStatus.REJECTED } : e));
+                                                        setSelectedEvent(null);
+                                                        alert('Event rejected');
+                                                    } catch (err) {
+                                                        alert('Failed to reject event');
+                                                    }
+                                                }}
+                                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors flex items-center gap-2"
+                                            >
+                                                Reject
+                                            </button>
+                                        </>
+                                    )}
                                     <button
                                         onClick={() => {
                                             const eventSlug = selectedEvent.id;

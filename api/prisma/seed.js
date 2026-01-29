@@ -79,35 +79,48 @@ async function main() {
     console.log('✅ Cleared all events (Ready for manual entry)');
 
     // 4. Create Resources
-    // const resources = [
-    //     ...
-    // ];
-
     // Delete existing resources and recreate (for dev seeding)
-    // await prisma.resourceBooking.deleteMany({});
-    // await prisma.resource.deleteMany({});
+    await prisma.resourceBooking.deleteMany({});
+    await prisma.resource.deleteMany({});
 
-    /*
-    const createdResources = [];
+    const resources = [
+        {
+            name: 'Main Auditorium',
+            type: 'HALL',
+            description: 'Large auditorium for events and conferences.',
+            capacity: 500,
+            requiresApproval: true,
+            isAvailable: true,
+        },
+        {
+            name: 'Computer Lab 1',
+            type: 'LAB',
+            description: 'High-performance computer lab.',
+            capacity: 30,
+            requiresApproval: false,
+            isAvailable: true,
+        },
+        {
+            name: 'Conference Room A',
+            type: 'ROOM',
+            description: 'Meeting room with projector.',
+            capacity: 15,
+            requiresApproval: false,
+            isAvailable: true,
+        }
+    ];
+
     for (const resource of resources) {
-        const created = await prisma.resource.create({
+        await prisma.resource.create({
             data: resource,
         });
-        createdResources.push(created);
     }
-    */
 
-    // Get organizer user for bookings
-    /*
-    const bookingOrganizer = await prisma.user.findFirst({
-        where: { role: 'ORGANIZER' },
-    });
+    console.log('✅ Created resources');
 
-    if (bookingOrganizer && createdResources.length > 0) {
-        // ... (bookings logic commented out)
-    }
-    */
-    console.log('✅ Skipped resource and booking creation (User requested empty state)');
+    // Clear bookings to ensure no conflicts
+    await prisma.resourceBooking.deleteMany({});
+    console.log('✅ Cleared all bookings');
 }
 
 main()

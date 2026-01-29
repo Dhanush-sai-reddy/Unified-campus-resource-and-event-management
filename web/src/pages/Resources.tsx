@@ -244,13 +244,21 @@ export default function Resources() {
         }
 
         try {
-            const dateStr = selectedDate.toISOString().split('T')[0];
+            // Construct dates properly in local time then convert to ISO
+            const start = new Date(selectedDate);
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            start.setHours(startHour, startMin, 0, 0);
+
+            const end = new Date(selectedDate);
+            const [endHour, endMin] = endTime.split(':').map(Number);
+            end.setHours(endHour, endMin, 0, 0);
+
             await api.createBooking(selectedResource.id, {
                 title: eventName,
                 purpose: eventName,
                 eventId: selectedEventId || undefined,
-                startTime: `${dateStr}T${startTime}:00.000Z`,
-                endTime: `${dateStr}T${endTime}:00.000Z`,
+                startTime: start.toISOString(),
+                endTime: end.toISOString(),
             });
             setIsModalOpen(false);
             setEventName('');
@@ -533,8 +541,7 @@ export default function Resources() {
                                         {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
                                             <button
                                                 onClick={() => {
-                                                    setSelectedResource(resource);
-                                                    setViewMode('calendar');
+                                                    openBookingForm(resource);
                                                 }}
                                                 disabled={!resource.isAvailable}
                                                 className="flex-1 py-2.5 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-surface-900 text-white hover:bg-surface-800"
@@ -590,8 +597,7 @@ export default function Resources() {
                                         {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
                                             <button
                                                 onClick={() => {
-                                                    setSelectedResource(resource);
-                                                    setViewMode('calendar');
+                                                    openBookingForm(resource);
                                                 }}
                                                 disabled={!resource.isAvailable}
                                                 className="px-4 py-2 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-primary-600 text-white hover:bg-primary-700"

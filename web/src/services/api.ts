@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config';
-import { Event, Booking } from '../types';
+import { Event, Booking, Notification } from '../types';
 
 const getHeaders = () => {
     const token = localStorage.getItem('token');
@@ -10,9 +10,19 @@ const getHeaders = () => {
 };
 
 export const api = {
+    // Auth
+    getCurrentUser: async () => {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to fetch current user');
+        return response.json();
+    },
+
     // Events
-    getEvents: async (): Promise<Event[]> => {
-        const response = await fetch(`${API_BASE_URL}/events`, {
+    getEvents: async (status?: string): Promise<Event[]> => {
+        const query = status ? `?status=${status}` : '';
+        const response = await fetch(`${API_BASE_URL}/events${query}`, {
             headers: getHeaders(),
         });
         if (!response.ok) throw new Error('Failed to fetch events');
@@ -116,6 +126,25 @@ export const api = {
         return response.json();
     },
 
+    approveEvent: async (id: string) => {
+        const response = await fetch(`${API_BASE_URL}/events/${id}/approve`, {
+            method: 'POST',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to approve event');
+        return response.json();
+    },
+
+    rejectEvent: async (id: string, reason?: string) => {
+        const response = await fetch(`${API_BASE_URL}/events/${id}/reject`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ reason }),
+        });
+        if (!response.ok) throw new Error('Failed to reject event');
+        return response.json();
+    },
+
     createBooking: async (resourceId: string, data: Partial<Booking>) => {
         const response = await fetch(`${API_BASE_URL}/resources/${resourceId}/book`, {
             method: 'POST',
@@ -145,6 +174,24 @@ export const api = {
             headers: getHeaders(),
         });
         if (!response.ok) throw new Error('Failed to delete booking');
+        return response.json();
+    },
+
+    // Notifications
+    getNotifications: async (): Promise<Notification[]> => {
+        const response = await fetch(`${API_BASE_URL}/notifications`, {
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to fetch notifications');
+        return response.json();
+    },
+
+    markNotificationRead: async (id: string) => {
+        const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to mark notification as read');
         return response.json();
     },
 

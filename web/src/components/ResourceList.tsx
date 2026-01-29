@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Resource, ResourceType, User } from '../types';
-import { getResources, createBooking, getBookings } from '../services/mockService';
+import { api } from '../services/api';
 import { Monitor, Square, MapPin, Search, Filter, X, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,7 +24,7 @@ const ResourceList: React.FC<ResourceListProps> = ({ currentUser }) => {
     setLoading(true);
     // Simulate network delay for effect
     await new Promise(resolve => setTimeout(resolve, 800));
-    const [resData] = await Promise.all([getResources(), getBookings()]);
+    const [resData] = await Promise.all([api.getResources(), api.getBookings()]);
     setResources(resData);
     setLoading(false);
   };
@@ -51,7 +51,7 @@ const ResourceList: React.FC<ResourceListProps> = ({ currentUser }) => {
     if (!selectedResource) return;
 
     try {
-      await createBooking({
+      await api.createBooking({
         resourceId: selectedResource.id,
         userId: currentUser.id,
         userName: currentUser.name,

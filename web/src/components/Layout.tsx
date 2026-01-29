@@ -4,7 +4,8 @@ import { Bell, Search, Info, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-import { getNotifications, markNotificationRead, Notification } from '../services/mockService';
+import { api } from '../services/api';
+import { Notification } from '../types';
 
 const pageTitles: Record<string, string> = {
     '/': 'Dashboard',
@@ -28,7 +29,7 @@ export default function Layout() {
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
-                const data = await getNotifications();
+                const data = await api.getNotifications();
                 setNotifications(data);
             } catch (error) {
                 console.error("Failed to fetch notifications", error);
@@ -53,7 +54,7 @@ export default function Layout() {
 
     const handleMarkRead = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        await markNotificationRead(id);
+        await api.markNotificationRead(id);
         setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
     };
 

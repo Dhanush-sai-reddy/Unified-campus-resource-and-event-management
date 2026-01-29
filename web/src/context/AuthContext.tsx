@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User } from '../types';
-import { getCurrentUser } from '../services/mockService';
+import { api } from '../services/api';
 import { API_BASE_URL } from '../config';
 
 interface AuthContextType {
@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
-            getCurrentUser()
+            api.getCurrentUser()
                 .then(u => setUser(u))
                 .catch(() => {
                     localStorage.removeItem('token');

@@ -36,11 +36,17 @@ router.get('/', async (req, res) => {
     try {
         const { status, clubId } = req.query;
 
+        // Default to APPROVED if no status provided
+        const whereClause: any = {
+            status: status ? (status as any) : 'APPROVED',
+        };
+
+        if (clubId) {
+            whereClause.clubId = clubId as string;
+        }
+
         const events = await prisma.event.findMany({
-            where: {
-                ...(status && { status: status as any }),
-                ...(clubId && { clubId: clubId as string }),
-            },
+            where: whereClause,
             include: {
                 organizer: { select: { id: true, name: true, avatar: true } },
                 club: { select: { id: true, name: true } },
@@ -79,19 +85,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Check for booking conflicts (duplicated from resources.ts)
-async function hasConflict(resourceId: string, startTime: Date, endTime: Date) {
-    const conflicting = await prisma.resourceBooking.findFirst({
-        where: {
-            resourceId,
-            status: { in: ['PENDING', 'APPROVED'] },
-            OR: [
-                { startTime: { lt: endTime }, endTime: { gt: startTime } },
-            ],
-        },
-    });
-    return conflicting !== null;
-}
+import { hasConflict } from '../services/bookingService';
 
 // Create event
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -106,6 +100,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         const end = endDate ? new Date(endDate) : new Date(start.getTime() + 60 * 60 * 1000);
 
         // If resourceId is provided, check for conflicts
+        // ... (conflict check code remains same) ...
         let bookingData = undefined;
         if (resourceId) {
             const conflict = await hasConflict(resourceId, start, end);
@@ -139,7 +134,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
                 isMultiDay: isMultiDay || false,
                 organizerId: req.userId!,
                 clubId,
-                status: 'DRAFT',
+                status: 'PENDING', // Default to PENDING for approval workflow
                 ...(bookingData && { resourceBookings: bookingData }),
             },
             include: {
@@ -160,6 +155,69 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to create event' });
+    }
+});
+
+// Approve event
+router.post('/:id/approve', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+    try {
+        const event = await prisma.event.update({
+            where: { id: req.params.id },
+            data: { status: 'APPROVED' },
+            include: { organizer: true } // Include organizer for notification if needed
+        });
+
+        // Update associated booking if exists
+        await prisma.resourceBooking.updateMany({
+            where: { eventId: event.id },
+            data: { status: 'APPROVED' }
+        });
+
+        await auditLog('event_approved', { eventId: event.id, userId: req.userId });
+
+        // Notify organizer
+        await createNotification(
+            event.organizerId,
+            'EVENT_APPROVED',
+            'Event Approved',
+            `Your event "${event.title}" has been approved.`,
+            `/events`
+        );
+
+        res.json(event);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to approve event' });
+    }
+});
+
+// Reject event
+router.post('/:id/reject', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+    try {
+        const { reason } = req.body;
+        const event = await prisma.event.update({
+            where: { id: req.params.id },
+            data: { status: 'REJECTED' },
+        });
+
+        // Update associated booking if exists
+        await prisma.resourceBooking.updateMany({
+            where: { eventId: event.id },
+            data: { status: 'REJECTED' }
+        });
+
+        await auditLog('event_rejected', { eventId: event.id, userId: req.userId, reason });
+
+        await createNotification(
+            event.organizerId,
+            'EVENT_REJECTED',
+            'Event Rejected',
+            `Your event "${event.title}" has been rejected. ${reason ? `Reason: ${reason}` : ''}`,
+            `/events`
+        );
+
+        res.json(event);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to reject event' });
     }
 });
 
