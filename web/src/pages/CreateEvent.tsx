@@ -24,7 +24,19 @@ export default function CreateEvent() {
     const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
     const [resourceBookings, setResourceBookings] = useState<Booking[]>([]);
 
-    const [viewDate] = useState(new Date());
+    const [viewDate, setViewDate] = useState(new Date());
+
+    const handlePrevWeek = () => {
+        const newDate = new Date(viewDate);
+        newDate.setDate(newDate.getDate() - 7);
+        setViewDate(newDate);
+    };
+
+    const handleNextWeek = () => {
+        const newDate = new Date(viewDate);
+        newDate.setDate(newDate.getDate() + 7);
+        setViewDate(newDate);
+    };
 
     // Draft State
     const [draftBookings, setDraftBookings] = useState<DraftBooking[]>([]);
@@ -230,8 +242,20 @@ export default function CreateEvent() {
                     {/* Calendar Grid */}
                     {selectedResourceId ? (
                         <div className="flex-1 bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden flex flex-col">
-                            <div className="p-4 border-b border-surface-100">
+                            <div className="p-4 border-b border-surface-100 flex items-center justify-between">
                                 <h3 className="text-lg font-semibold text-surface-900">Availability for {selectedResource?.name}</h3>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={handlePrevWeek} className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-surface-600">
+                                        <ChevronLeft size={20} />
+                                    </button>
+                                    <span className="text-sm font-medium text-surface-700 min-w-[100px] text-center">
+                                        {viewDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                                    </span>
+                                    <button onClick={handleNextWeek} className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-surface-600">
+                                        {/* Rotating ChevronLeft 180deg to act as Right */}
+                                        <ChevronLeft size={20} className="rotate-180" />
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex-1 overflow-auto">
                                 <CalendarGrid
