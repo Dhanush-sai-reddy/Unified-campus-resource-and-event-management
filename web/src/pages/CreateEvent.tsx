@@ -38,12 +38,15 @@ export default function CreateEvent() {
         setViewDate(newDate);
     };
 
-    // Draft State
+
     const [draftBookings, setDraftBookings] = useState<DraftBooking[]>([]);
 
-    // Form State (No Modal)
+
     const [eventTitle, setEventTitle] = useState('');
     const [eventDescription, setEventDescription] = useState('');
+    const [eventClub, setEventClub] = useState('');
+    const [eventBudget, setEventBudget] = useState(0);
+    const [eventParticipants, setEventParticipants] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -85,7 +88,7 @@ export default function CreateEvent() {
         if (!resource || !selectedResourceId) return;
 
         const newDraft: DraftBooking = {
-            id: `draft-${Date.now()}-${Math.random()}`, // Unique ID
+            id: `draft-${Date.now()}-${Math.random()}`,
             resourceId: selectedResourceId,
             resourceName: resource.name,
             startHour: data.startHour,
@@ -114,7 +117,7 @@ export default function CreateEvent() {
 
         setIsSubmitting(true);
         try {
-            // 1. Create Main Event
+
             const primary = draftBookings[0];
             const start = new Date(`${primary.startDate}T00:00:00`);
             start.setHours(primary.startHour, 0, 0, 0);
@@ -128,10 +131,13 @@ export default function CreateEvent() {
                 date: start.toISOString(),
                 endDate: end.toISOString(),
                 location: primary.resourceName,
-                resourceId: primary.resourceId
+                resourceId: primary.resourceId,
+                budget: eventBudget,
+                participants: eventParticipants,
+                clubName: eventClub
             });
 
-            // 2. Create Bookings for ALL drafts
+
             await Promise.all(draftBookings.map(draft => {
                 const bStart = new Date(`${draft.startDate}T00:00:00`);
                 bStart.setHours(draft.startHour, 0, 0, 0);
@@ -158,7 +164,7 @@ export default function CreateEvent() {
 
     const selectedResource = resources.find(r => r.id === selectedResourceId);
 
-    // Merge existing bookings with drafts for display
+
     const displayEvents = [
         ...resourceBookings.map(b => ({
             id: b.id,
@@ -196,7 +202,7 @@ export default function CreateEvent() {
 
     return (
         <div className="h-[calc(100vh-6rem)] flex flex-col space-y-4 max-w-[98vw] mx-auto relative overflow-hidden">
-            {/* Header */}
+
             <div className="flex items-center gap-4 flex-shrink-0">
                 <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-full transition-colors">
                     <ChevronLeft size={24} className="text-surface-600" />
@@ -207,12 +213,12 @@ export default function CreateEvent() {
                 </div>
             </div>
 
-            {/* Main Split Layout */}
+
             <div className="flex-1 flex gap-6 overflow-hidden">
 
-                {/* LEFT: Calendar & Resource Selector */}
+
                 <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-                    {/* Resource Selector */}
+
                     <div className="bg-white p-4 rounded-2xl shadow-sm border border-surface-200">
                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                             {resources.map(res => (
@@ -239,7 +245,7 @@ export default function CreateEvent() {
                         </div>
                     </div>
 
-                    {/* Calendar Grid */}
+
                     {selectedResourceId ? (
                         <div className="flex-1 bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden flex flex-col">
                             <div className="p-4 border-b border-surface-100 flex items-center justify-between">
@@ -252,7 +258,6 @@ export default function CreateEvent() {
                                         {viewDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
                                     </span>
                                     <button onClick={handleNextWeek} className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-surface-600">
-                                        {/* Rotating ChevronLeft 180deg to act as Right */}
                                         <ChevronLeft size={20} className="rotate-180" />
                                     </button>
                                 </div>
@@ -276,7 +281,7 @@ export default function CreateEvent() {
                     )}
                 </div>
 
-                {/* RIGHT: Persistent Sidebar (The "Cart") */}
+
                 <div className="w-96 flex-shrink-0 bg-white rounded-2xl shadow-lg border border-surface-200 flex flex-col overflow-hidden h-[95%] self-center">
                     <div className="p-5 border-b border-surface-100 bg-surface-50/50">
                         <h2 className="text-lg font-bold text-surface-900 flex items-center gap-2">
@@ -287,7 +292,7 @@ export default function CreateEvent() {
 
                     <div className="flex-1 overflow-y-auto p-5 space-y-6">
 
-                        {/* Event Name Input */}
+
                         <div>
                             <label className="block text-sm font-medium text-surface-700 mb-1.5">Event Name</label>
                             <input
@@ -299,7 +304,40 @@ export default function CreateEvent() {
                             />
                         </div>
 
-                        {/* Description */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="col-span-2">
+                                <label className="block text-sm font-medium text-surface-700 mb-1.5">Organizing Club</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Robotics Club"
+                                    value={eventClub}
+                                    onChange={e => setEventClub(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-surface-700 mb-1.5">Budget (₹)</label>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    value={eventBudget}
+                                    onChange={e => setEventBudget(Number(e.target.value))}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-surface-700 mb-1.5">Participants</label>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    value={eventParticipants}
+                                    onChange={e => setEventParticipants(Number(e.target.value))}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+
+
                         <div>
                             <label className="block text-sm font-medium text-surface-700 mb-1.5">Description (Optional)</label>
                             <textarea
@@ -311,7 +349,7 @@ export default function CreateEvent() {
                             />
                         </div>
 
-                        {/* Selected Slots List */}
+
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <label className="block text-sm font-medium text-surface-700">Selected Slots</label>

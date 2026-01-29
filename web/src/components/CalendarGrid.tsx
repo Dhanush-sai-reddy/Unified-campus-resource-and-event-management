@@ -8,14 +8,14 @@ export interface CalendarEvent {
     title: string;
     startHour: number;
     endHour: number;
-    day: number; // 0-6 for week view OR index of resource
+    day: number;
     color: string;
     location?: string;
     resourceId?: string;
-    originalEvent?: Event; // Reference to original
+    originalEvent?: Event;
 }
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 8); // 8 AM to 9 PM
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 8);
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export const CALENDAR_COLORS = [
     'bg-blue-500',
@@ -43,17 +43,17 @@ interface CalendarGridProps {
 export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, bookings, resources, onEventCreate, onEventClick, onEventUpdate, disableQuickAdd, readOnly }: CalendarGridProps) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
 
-    // Interaction State
+
     const [draggingEvent, setDraggingEvent] = useState<string | null>(null);
     const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom' } | null>(null);
-    // Track original event for diffing changes
+
     const [dragStartSnapshot, setDragStartSnapshot] = useState<CalendarEvent | null>(null);
 
     const [isSelecting, setIsSelecting] = useState(false);
     const [selectionStart, setSelectionStart] = useState<{ day: number, hour: number } | null>(null);
     const [selectionEnd, setSelectionEnd] = useState<{ day: number, hour: number } | null>(null);
 
-    // Popover State
+
     const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [popoverPosition, setPopoverPosition] = useState<{ top: number, left: number } | null>(null);
     const [newEvent, setNewEvent] = useState({
@@ -69,7 +69,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
     const calendarRef = useRef<HTMLDivElement>(null);
     const quickAddRef = useRef<HTMLDivElement>(null);
 
-    // Get week dates
+
     const getWeekDates = () => {
         const start = new Date(currentDate);
         start.setDate(start.getDate() - start.getDay());
@@ -81,7 +81,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
     };
     const weekDates = getWeekDates();
 
-    // Map Events/Bookings to Visual Events
+
     useEffect(() => {
         const startOfWeek = weekDates[0];
         startOfWeek.setHours(0, 0, 0, 0);
@@ -138,15 +138,11 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                 }
             });
         } else {
-            // RESOURCE VIEW
-            // Columns are RESOURCES
             if (resources.length > 0) {
                 bookings.forEach(b => {
                     const bookingStart = new Date(b.startTime);
                     const bookingEnd = new Date(b.endTime);
 
-                    // Check if booking overlaps with currentDate (Start or End is on current date)
-                    // We only display the portion on the current day for now
                     const startOfDay = new Date(currentDate);
                     startOfDay.setHours(0, 0, 0, 0);
                     const endOfDay = new Date(currentDate);
@@ -164,7 +160,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                             endH = bookingEnd.getHours();
                             if (bookingEnd.getMinutes() > 0) endH++;
                         } else {
-                            endH = 22; // Cap at end of day view
+                            endH = 22;
                         }
 
                         startH = Math.max(8, startH);
@@ -176,7 +172,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                                 title: b.title,
                                 startHour: startH,
                                 endHour: endH,
-                                day: resourceIndex, // Column Index
+                                day: resourceIndex,
                                 color: 'bg-slate-500',
                                 location: b.resource?.name,
                                 resourceId: b.resourceId
@@ -189,20 +185,18 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         setEvents(mapped);
     }, [dbEvents, bookings, currentDate, viewMode, resources, weekDates]);
 
-    // Coordinates
+
     const getGridCoordinates = (e: React.MouseEvent) => {
         if (!calendarRef.current) return null;
         const rect = calendarRef.current.getBoundingClientRect();
-        const HEADER_HEIGHT = 50; // Approximated
+        const HEADER_HEIGHT = 50;
         const CELL_HEIGHT = 60;
 
-        // We need to account for scroll if any, but usually fixed.
-        // The rect.top already includes page scroll offset relative to viewport.
+
 
         const gridTop = rect.top + HEADER_HEIGHT;
         const cellHeight = CELL_HEIGHT;
         const visibleCols = viewMode === 'resources' ? resources.length : 7;
-        // Basic overflow handling could be added here if needed
         const cellWidth = (rect.width - 60) / visibleCols;
 
         const relativeY = e.clientY - gridTop;
@@ -224,7 +218,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             if (edge) setResizingEvent({ id: eventId, edge });
             else setDraggingEvent(eventId);
 
-            // Snapshot for update check
+
             const ev = events.find(e => e.id === eventId);
             if (ev) setDragStartSnapshot(ev);
         } else {
@@ -325,7 +319,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             }
         }
 
-        // Handle Drop for Update
+
         if ((draggingEvent || resizingEvent) && onEventUpdate) {
             const eventId = draggingEvent || resizingEvent?.id;
             const updatedEvent = events.find(e => e.id === eventId);
@@ -353,7 +347,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         setShowQuickAdd(false);
     };
 
-    // Render Overlay Helper
+
     const renderSelectionOverlay = () => {
         if (!isSelecting || !selectionStart || !selectionEnd) return null;
 
@@ -398,7 +392,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             onMouseUp={handleMouseUp}
             onMouseDown={handleMouseDown}
         >
-            {/* Header */}
+
             <div className="flex border-b border-surface-200 bg-surface-50 grid-header h-[50px]">
                 <div className="w-[60px] flex-shrink-0 border-r border-surface-200"></div>
                 {viewMode === 'events' ? weekDates.map((date, i) => (
@@ -414,7 +408,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                 ))}
             </div>
 
-            {/* Grid */}
+
             <div className="relative" style={{ height: `${HOURS.length * 60}px` }}>
                 {HOURS.map((hour, i) => (
                     <div key={hour} className="absolute left-0 right-0 flex border-b border-surface-100" style={{ top: `${i * 60}px`, height: '60px' }}>
@@ -427,10 +421,10 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                     </div>
                 ))}
 
-                {/* Selection Overlay */}
+
                 {renderSelectionOverlay()}
 
-                {/* Events */}
+
                 {events.map((event) => {
                     const top = (event.startHour - 8) * 60;
                     const height = (event.endHour - event.startHour) * 60;
@@ -457,7 +451,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                     );
                 })}
 
-                {/* Popover */}
+
                 <AnimatePresence>
                     {showQuickAdd && popoverPosition && (
                         <motion.div
