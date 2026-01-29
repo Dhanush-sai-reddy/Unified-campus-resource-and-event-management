@@ -24,12 +24,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-    { label: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
+    { label: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: [UserRole.ADMIN, UserRole.ORGANIZER] },
     { label: 'Events', path: '/events', icon: <Calendar size={20} /> },
     { label: 'Calendar', path: '/calendar', icon: <CalendarDays size={20} /> },
 
     { label: 'Chat', path: '/chat', icon: <MessageCircle size={20} /> },
-    { label: 'Resources', path: '/resources', icon: <CalendarDays size={20} /> },
+    { label: 'Resources', path: '/resources', icon: <CalendarDays size={20} />, roles: [UserRole.ADMIN, UserRole.ORGANIZER] },
     { label: 'Clubs', path: '/clubs', icon: <Users size={20} /> },
     { label: 'Profile', path: '/profile', icon: <User size={20} /> },
     { label: 'Analytics', path: '/analytics', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN] },
@@ -40,8 +40,16 @@ export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
 
+    console.log('Sidebar: Current User:', user);
+    console.log('Sidebar: User Role:', user?.role);
+
     const filteredItems = navItems.filter(
-        item => !item.roles || (user && item.roles.includes(user.role))
+        item => {
+            if (!item.roles) return true;
+            const hasRole = user && item.roles.includes(user.role);
+            // console.log(`Checking item ${item.label}: User Role: ${user?.role}, Required Roles: ${item.roles}, Allowed: ${hasRole}`);
+            return hasRole;
+        }
     );
 
     const SidebarContent = () => (

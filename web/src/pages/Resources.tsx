@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Resource, ResourceType, Booking, Event, EventStatus } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { Resource, ResourceType, Booking, Event, EventStatus, UserRole } from '../types';
 import { api } from '../services/api';
 import { Monitor, Square, Search, X, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Lock, Plus, Trash2, Calendar, MapPin, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -162,20 +163,13 @@ function TimeSlotSelector({ label, value, onChange }: { label: string; value: st
 export default function Resources() {
     const { user } = useAuth();
 
-    // if (user?.role === 'PARTICIPANT') {
-    //     return (
-    //         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
-    //             <div className="bg-surface-100 p-4 rounded-full mb-4">
-    //                 <Lock size={48} className="text-surface-400" />
-    //             </div>
-    //             <h2 className="text-2xl font-bold text-surface-900 mb-2">Access Restricted</h2>
-    //             <p className="text-surface-500 max-w-md">
-    //                 Resource booking is restricted to Organizers and Administrators.
-    //                 Please contact an administrator if you need access.
-    //             </p>
-    //         </div>
-    //     );
-    // }
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (user?.role === UserRole.PARTICIPANT) {
+            navigate('/events');
+        }
+    }, [user, navigate]);
 
     const [resources, setResources] = useState<Resource[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -286,7 +280,7 @@ export default function Resources() {
             fetchData();
         } catch (err: any) {
             console.error(err);
-            alert("Failed to create resource");
+            alert(err.message || "Failed to create resource");
         }
     };
 
@@ -298,9 +292,9 @@ export default function Resources() {
             try {
                 await api.deleteResource(id);
                 fetchData();
-            } catch (err) {
+            } catch (err: any) {
                 console.error(err);
-                alert("Failed to delete resource");
+                alert(err.message || "Failed to delete resource");
             }
         }
     };
@@ -722,9 +716,9 @@ export default function Resources() {
                                                 endTime: endStr,
                                             });
                                             fetchData();
-                                        } catch (err) {
+                                        } catch (err: any) {
                                             console.error("Failed to book:", err);
-                                            alert("Failed to book resource. Please try again.");
+                                            alert(err.message || "Failed to book resource. Please try again.");
                                         }
                                     }}
                                     disableQuickAdd={false}

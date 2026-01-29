@@ -2,7 +2,8 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import { motion } from 'framer-motion';
 import { Calendar, Users, Building2, TrendingUp, Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 interface StatCardProps {
     title: string;
@@ -102,6 +103,13 @@ function ActivityItem({ title, time, status }: ActivityItemProps) {
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (user?.role === UserRole.PARTICIPANT) {
+            navigate('/events');
+        }
+    }, [user, navigate]);
 
     const isAdmin = user?.role === UserRole.ADMIN;
     const isOrganizer = user?.role === UserRole.ORGANIZER;

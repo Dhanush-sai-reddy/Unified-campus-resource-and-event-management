@@ -155,9 +155,10 @@ export default function CreateEvent() {
             }));
 
             navigate('/calendar');
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to create event", err);
-            alert("Failed to create event. There might be a conflict.");
+            const errorMessage = err.message || "Failed to create event. There might be a conflict.";
+            alert(errorMessage);
             setIsSubmitting(false);
         }
     };
