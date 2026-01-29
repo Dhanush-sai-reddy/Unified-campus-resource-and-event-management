@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Event, Booking, Resource } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, MapPin, X, Server, MoreHorizontal } from 'lucide-react';
+import { Server } from 'lucide-react';
 
 export interface CalendarEvent {
     id: string;
@@ -40,7 +40,7 @@ interface CalendarGridProps {
     readOnly?: boolean;
 }
 
-export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, bookings, resources, onEventCreate, onDeleteEvent, onEventClick, onEventUpdate, disableQuickAdd, readOnly }: CalendarGridProps) {
+export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, bookings, resources, onEventCreate, onEventClick, onEventUpdate, disableQuickAdd, readOnly }: CalendarGridProps) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
 
     // Interaction State
@@ -406,7 +406,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                         <span className="text-xs font-semibold text-surface-600 uppercase block">{DAYS[i]}</span>
                         <span className={`text-sm font-bold ${date.toDateString() === new Date().toDateString() ? 'text-primary-600' : 'text-surface-900'}`}>{date.getDate()}</span>
                     </div>
-                )) : resources.map((res, i) => (
+                )) : resources.map((res) => (
                     <div key={res.id} className="flex-1 text-center py-3 border-r border-surface-200 last:border-0 flex items-center justify-center gap-2">
                         <Server size={14} className="text-surface-400" />
                         <span className="text-sm font-semibold text-surface-700 truncate px-2">{res.name}</span>
@@ -435,7 +435,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                     const top = (event.startHour - 8) * 60;
                     const height = (event.endHour - event.startHour) * 60;
                     const colCount = viewMode === 'resources' ? resources.length : 7;
-                    const width = `calc((100% - 60px) / ${colCount})`;
+
                     const left = `calc(60px + ${event.day} * ((100% - 60px) / ${colCount}))`;
 
                     return (

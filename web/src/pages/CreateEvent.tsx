@@ -3,9 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Resource, Booking } from '../types';
 import { useAuth } from '../context/AuthContext';
-import CalendarGrid, { CalendarEvent } from '../components/CalendarGrid';
-import { ChevronLeft, Info, Clock, Calendar as CalendarIcon, X } from 'lucide-react';
+import CalendarGrid from '../components/CalendarGrid';
+import { ChevronLeft, Info, Calendar as CalendarIcon, Clock, Trash2, Save, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+interface DraftBooking {
+    id: string;
+    resourceId: string;
+    resourceName: string;
+    startHour: number;
+    endHour: number;
+    startDate: string;
+    endDate: string;
+}
 
 export default function CreateEvent() {
     const navigate = useNavigate();
@@ -16,15 +26,12 @@ export default function CreateEvent() {
 
     const [viewDate] = useState(new Date());
 
-    // Modal State
-    const [showModal, setShowModal] = useState(false);
-    const [draftEvent, setDraftEvent] = useState<{
-        startHour: number;
-        endHour: number;
-        startDate: string;
-        endDate: string;
-    } | null>(null);
+    // Draft State
+    const [draftBookings, setDraftBookings] = useState<DraftBooking[]>([]);
+
+    // Form State (No Modal)
     const [eventTitle, setEventTitle] = useState('');
+    const [eventDescription, setEventDescription] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -62,41 +69,72 @@ export default function CreateEvent() {
     }, [selectedResourceId]);
 
     const handleDragComplete = (data: { startHour: number, endHour: number, day: number, startDate: string, endDate: string }) => {
-        setDraftEvent({
+        const resource = resources.find(r => r.id === selectedResourceId);
+        if (!resource || !selectedResourceId) return;
+
+        const newDraft: DraftBooking = {
+            id: `draft-${Date.now()}-${Math.random()}`, // Unique ID
+            resourceId: selectedResourceId,
+            resourceName: resource.name,
             startHour: data.startHour,
             endHour: data.endHour,
             startDate: data.startDate,
             endDate: data.endDate
-        });
-        setEventTitle(''); // Reset title
-        setShowModal(true);
+        };
+
+        setDraftBookings(prev => [...prev, newDraft]);
+    };
+
+    const removeDraft = (id: string) => {
+        setDraftBookings(prev => prev.filter(b => b.id !== id));
     };
 
     const handleConfirmCreate = async () => {
-        if (isSubmitting) return; // Prevent double submission
+        if (isSubmitting) return;
         if (!eventTitle.trim()) {
-            alert("Please enter an event title.");
+            alert("Please enter an event title in the sidebar.");
             return;
         }
-        if (!selectedResourceId || !draftEvent) return;
+        if (draftBookings.length === 0) {
+            alert("No slots selected. Please drag on the calendar to select slots.");
+            return;
+        }
 
         setIsSubmitting(true);
         try {
-            // Parse as local time to avoid UTC shifts
-            const start = new Date(`${draftEvent.startDate}T00:00:00`);
-            start.setHours(draftEvent.startHour, 0, 0, 0);
+            // 1. Create Main Event
+            const primary = draftBookings[0];
+            const start = new Date(`${primary.startDate}T00:00:00`);
+            start.setHours(primary.startHour, 0, 0, 0);
 
-            const end = new Date(`${draftEvent.endDate}T00:00:00`);
-            end.setHours(draftEvent.endHour, 0, 0, 0);
+            const end = new Date(`${primary.endDate}T00:00:00`);
+            end.setHours(primary.endHour, 0, 0, 0);
 
-            await api.createEvent({
+            const newEvent = await api.createEvent({
                 title: eventTitle,
-                description: `Event at ${resources.find(r => r.id === selectedResourceId)?.name}`,
+                description: eventDescription || `Event dealing with ${draftBookings.length} resources`,
                 date: start.toISOString(),
                 endDate: end.toISOString(),
-                location: resources.find(r => r.id === selectedResourceId)?.name || '',
-                resourceId: selectedResourceId
+                location: primary.resourceName,
+                resourceId: primary.resourceId
             });
+
+            // 2. Create Bookings for ALL drafts
+            await Promise.all(draftBookings.map(draft => {
+                const bStart = new Date(`${draft.startDate}T00:00:00`);
+                bStart.setHours(draft.startHour, 0, 0, 0);
+
+                const bEnd = new Date(`${draft.endDate}T00:00:00`);
+                bEnd.setHours(draft.endHour, 0, 0, 0);
+
+                return api.createBooking(draft.resourceId, {
+                    title: eventTitle,
+                    eventId: newEvent.id,
+                    startTime: bStart.toISOString(),
+                    endTime: bEnd.toISOString(),
+                    purpose: eventDescription
+                });
+            }));
 
             navigate('/calendar');
         } catch (err) {
@@ -108,152 +146,212 @@ export default function CreateEvent() {
 
     const selectedResource = resources.find(r => r.id === selectedResourceId);
 
+    // Merge existing bookings with drafts for display
+    const displayEvents = [
+        ...resourceBookings.map(b => ({
+            id: b.id,
+            title: b.title,
+            date: b.startTime,
+            endDate: b.endTime,
+            day: 0,
+            endHour: 0,
+            color: 'bg-slate-500',
+            location: b.resource?.name || '',
+            resourceId: b.resourceId
+        })),
+        ...draftBookings
+            .filter(d => d.resourceId === selectedResourceId)
+            .map(d => ({
+                id: d.id,
+                title: 'NEW',
+                date: (() => {
+                    const date = new Date(`${d.startDate}T00:00:00`);
+                    date.setHours(d.startHour, 0, 0, 0);
+                    return date.toISOString();
+                })(),
+                endDate: (() => {
+                    const date = new Date(`${d.endDate}T00:00:00`);
+                    date.setHours(d.endHour, 0, 0, 0);
+                    return date.toISOString();
+                })(),
+                day: 0,
+                endHour: 0,
+                color: 'bg-primary-500',
+                location: d.resourceName,
+                resourceId: d.resourceId
+            }))
+    ];
+
     return (
-        <div className="h-full flex flex-col space-y-4 max-w-6xl mx-auto relative">
+        <div className="h-[calc(100vh-6rem)] flex flex-col space-y-4 max-w-[98vw] mx-auto relative overflow-hidden">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-2">
+            <div className="flex items-center gap-4 flex-shrink-0">
                 <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-full transition-colors">
                     <ChevronLeft size={24} className="text-surface-600" />
                 </button>
-                <div className="flex-1">
+                <div>
                     <h1 className="text-2xl font-bold text-surface-900">Book Resource</h1>
-                    <p className="text-surface-500 text-sm">Select a resource and drag on the calendar to book</p>
+                    <p className="text-surface-500 text-sm">Select one or more slots across different resources</p>
                 </div>
             </div>
 
-            {/* Resource Selector */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-surface-200">
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                    {resources.map(res => (
-                        <button
-                            key={res.id}
-                            onClick={() => setSelectedResourceId(res.id)}
-                            className={`flex-shrink-0 px-4 py-3 rounded-xl border transition-all text-left min-w-[160px] ${selectedResourceId === res.id
-                                ? 'bg-primary-50 border-primary-500 ring-1 ring-primary-500'
-                                : 'bg-surface-50 border-surface-200 hover:bg-surface-100'
-                                }`}
-                        >
-                            <p className={`font-semibold ${selectedResourceId === res.id ? 'text-primary-900' : 'text-surface-900'}`}>
-                                {res.name}
-                            </p>
-                            <p className="text-xs text-surface-500 mt-1 capitalize">{res.type?.toLowerCase() || 'resource'}</p>
-                        </button>
-                    ))}
-                </div>
-                {selectedResource && (
-                    <div className="mt-3 flex items-center gap-2 text-sm text-surface-500 bg-surface-50 p-2 rounded-lg inline-flex">
-                        <Info size={16} />
-                        <span>Capacity: {selectedResource.capacity || 'N/A'} | {selectedResource.location || 'No location info'}</span>
-                    </div>
-                )}
-            </div>
+            {/* Main Split Layout */}
+            <div className="flex-1 flex gap-6 overflow-hidden">
 
-            {/* Calendar Grid for Selection */}
-            {selectedResourceId && (
-                <div className="flex-1 min-h-[500px]">
-                    <h3 className="text-lg font-semibold text-surface-900 mb-3">Availability for {selectedResource?.name}</h3>
-
-                    <CalendarGrid
-                        viewMode="events"
-                        disableQuickAdd={true}
-                        currentDate={viewDate}
-                        events={resourceBookings.map(b => ({
-                            id: b.id,
-                            title: b.title,
-                            // Map booking start/end to Grid format
-                            date: b.startTime,
-                            endDate: b.endTime,
-                            day: 0,
-                            endHour: 0,
-                            color: 'bg-slate-500',
-                            location: b.resource?.name || '',
-                            isMultiDay: false,
-                            status: b.status as any,
-                            budget: 0,
-                            organizerId: b.userId,
-                            participants: 0,
-                            organizerName: b.user?.name || '',
-                            clubName: '',
-                            resourceId: b.resourceId
-                        })) as any}
-                        bookings={[]}
-                        resources={[]}
-                        onEventCreate={async (data) => {
-                            handleDragComplete(data as any);
-                        }}
-                    />
-                </div>
-            )}
-
-            {/* Creation Modal */}
-            <AnimatePresence>
-                {showModal && draftEvent && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowModal(false)}
-                            className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-surface-100"
-                        >
-                            <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center bg-surface-50/50">
-                                <h3 className="text-lg font-bold text-surface-900">New Event Details</h3>
-                                <button onClick={() => setShowModal(false)} className="text-surface-400 hover:text-surface-600 transition-colors">
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-surface-700 mb-1">Event Title</label>
-                                    <input
-                                        type="text"
-                                        value={eventTitle}
-                                        onChange={(e) => setEventTitle(e.target.value)}
-                                        placeholder="e.g. Team Meeting"
-                                        className="w-full px-4 py-2 border border-surface-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
-                                        autoFocus
-                                        onKeyDown={(e) => e.key === 'Enter' && handleConfirmCreate()}
-                                    />
-                                </div>
-
-                                <div className="bg-surface-50 p-4 rounded-xl space-y-2">
-                                    <div className="flex items-center gap-2 text-sm text-surface-600">
-                                        <CalendarIcon size={16} className="text-primary-500" />
-                                        <span className="font-medium text-surface-900">
-                                            {new Date(draftEvent.startDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-surface-600">
-                                        <Clock size={16} className="text-primary-500" />
-                                        <span className="font-medium text-surface-900">
-                                            {draftEvent.startHour}:00 - {draftEvent.endHour}:00
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-surface-600">
-                                        <Info size={16} className="text-primary-500" />
-                                        <span>{selectedResource?.name}</span>
-                                    </div>
-                                </div>
-
+                {/* LEFT: Calendar & Resource Selector */}
+                <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+                    {/* Resource Selector */}
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-surface-200">
+                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                            {resources.map(res => (
                                 <button
-                                    onClick={handleConfirmCreate}
-                                    disabled={isSubmitting}
-                                    className="w-full py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/20 disabled:opacity-70 flex justify-center"
+                                    key={res.id}
+                                    onClick={() => setSelectedResourceId(res.id)}
+                                    className={`flex-shrink-0 px-4 py-3 rounded-xl border transition-all text-left min-w-[160px] ${selectedResourceId === res.id
+                                        ? 'bg-primary-50 border-primary-500 ring-1 ring-primary-500'
+                                        : 'bg-surface-50 border-surface-200 hover:bg-surface-100'
+                                        }`}
                                 >
-                                    {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Confirm Booking'}
+                                    <p className={`font-semibold ${selectedResourceId === res.id ? 'text-primary-900' : 'text-surface-900'}`}>
+                                        {res.name}
+                                    </p>
+                                    <p className="text-xs text-surface-500 mt-1 capitalize">{res.type?.toLowerCase() || 'resource'}</p>
+
+                                    {draftBookings.filter(d => d.resourceId === res.id).length > 0 && (
+                                        <span className="mt-1 inline-block px-2 py-0.5 bg-primary-600 text-white text-[10px] rounded-full">
+                                            {draftBookings.filter(d => d.resourceId === res.id).length} selected
+                                        </span>
+                                    )}
                                 </button>
-                            </div>
-                        </motion.div>
+                            ))}
+                        </div>
                     </div>
-                )}
-            </AnimatePresence>
+
+                    {/* Calendar Grid */}
+                    {selectedResourceId ? (
+                        <div className="flex-1 bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-surface-100">
+                                <h3 className="text-lg font-semibold text-surface-900">Availability for {selectedResource?.name}</h3>
+                            </div>
+                            <div className="flex-1 overflow-auto">
+                                <CalendarGrid
+                                    viewMode="events"
+                                    disableQuickAdd={true}
+                                    currentDate={viewDate}
+                                    events={displayEvents as any}
+                                    bookings={[]}
+                                    resources={[]}
+                                    onEventCreate={async (data) => handleDragComplete(data as any)}
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-surface-400">
+                            Select a resource to view availability
+                        </div>
+                    )}
+                </div>
+
+                {/* RIGHT: Persistent Sidebar (The "Cart") */}
+                <div className="w-96 flex-shrink-0 bg-white rounded-2xl shadow-lg border border-surface-200 flex flex-col overflow-hidden h-[95%] self-center">
+                    <div className="p-5 border-b border-surface-100 bg-surface-50/50">
+                        <h2 className="text-lg font-bold text-surface-900 flex items-center gap-2">
+                            <FileText size={20} className="text-primary-600" />
+                            Event Details
+                        </h2>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-5 space-y-6">
+
+                        {/* Event Name Input */}
+                        <div>
+                            <label className="block text-sm font-medium text-surface-700 mb-1.5">Event Name</label>
+                            <input
+                                type="text"
+                                placeholder="e.g. Project Sync"
+                                value={eventTitle}
+                                onChange={e => setEventTitle(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                            />
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <label className="block text-sm font-medium text-surface-700 mb-1.5">Description (Optional)</label>
+                            <textarea
+                                placeholder="Add details..."
+                                rows={3}
+                                value={eventDescription}
+                                onChange={e => setEventDescription(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none resize-none transition-all"
+                            />
+                        </div>
+
+                        {/* Selected Slots List */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-medium text-surface-700">Selected Slots</label>
+                                <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full font-medium">
+                                    {draftBookings.length}
+                                </span>
+                            </div>
+
+                            {draftBookings.length === 0 ? (
+                                <div className="p-8 text-center bg-surface-50 rounded-xl border border-dashed border-surface-200 text-surface-500 text-sm">
+                                    Drag on the calendar to select time slots.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <AnimatePresence mode="popLayout">
+                                        {draftBookings.map(draft => (
+                                            <motion.div
+                                                key={draft.id}
+                                                layout
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: 20 }}
+                                                className="bg-surface-50 p-3 rounded-xl border border-surface-100 group hover:border-surface-300 transition-colors"
+                                            >
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <span className="font-semibold text-sm text-surface-900">{draft.resourceName}</span>
+                                                    <button onClick={() => removeDraft(draft.id)} className="text-surface-400 hover:text-red-500 transition-colors">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-surface-600">
+                                                    <CalendarIcon size={12} />
+                                                    <span>{new Date(draft.startDate).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-surface-600">
+                                                    <Clock size={12} />
+                                                    <span>{draft.startHour}:00 - {draft.endHour}:00</span>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="p-5 border-t border-surface-100 bg-surface-50">
+                        <button
+                            onClick={handleConfirmCreate}
+                            disabled={isSubmitting || draftBookings.length === 0 || !eventTitle.trim()}
+                            className="w-full py-3 rounded-xl bg-primary-600 text-white font-bold text-lg hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    <Save size={20} />
+                                    Confirm & Book
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
