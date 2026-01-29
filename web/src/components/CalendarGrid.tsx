@@ -100,7 +100,12 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                 const colorIdx = e.id.charCodeAt(0) % CALENDAR_COLORS.length;
                 const color = CALENDAR_COLORS[colorIdx];
 
-                if (endDate < startOfWeek || startDate > endOfWeek) return;
+                if (endDate < startOfWeek || startDate > endOfWeek) {
+                    console.log(`[DEBUG] Skipping event ${e.title}: Range ${startDate.toISOString()}-${endDate.toISOString()} outside week ${startOfWeek.toISOString()}-${endOfWeek.toISOString()}`);
+                    return;
+                }
+
+                console.log(`[DEBUG] Processing event ${e.title} for week ${startOfWeek.toISOString()}`);
 
                 for (let i = 0; i < 7; i++) {
                     const currentDayDate = new Date(weekDates[i]);
@@ -109,6 +114,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                     nextDayDate.setDate(nextDayDate.getDate() + 1);
 
                     if (startDate < nextDayDate && endDate > currentDayDate) {
+                        console.log(`[DEBUG] Event ${e.title} overlaps day ${i} (${currentDayDate.toISOString()})`);
                         let startH = 8;
                         let endH = 22;
 
@@ -224,6 +230,24 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         } else {
             const coords = getGridCoordinates(e);
             if (coords) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                let targetDate = new Date();
+                if (viewMode === 'events') {
+                    targetDate = weekDates[coords.day];
+                } else {
+                    targetDate = currentDate;
+                }
+
+                // Create a comparison date (midnight)
+                const checkDate = new Date(targetDate);
+                checkDate.setHours(0, 0, 0, 0);
+
+                if (checkDate < today) {
+                    return; // Prevent selecting past days
+                }
+
                 setIsSelecting(true);
                 setSelectionStart(coords);
                 setSelectionEnd(coords);
@@ -274,14 +298,21 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             let endDateStr = '';
             let rId = undefined;
 
+            const toLocalDateString = (date: Date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
             if (viewMode === 'events') {
                 const startDateObj = weekDates[startD];
                 const endDateObj = weekDates[endD];
-                startDateStr = startDateObj.toISOString().split('T')[0];
-                endDateStr = endDateObj.toISOString().split('T')[0];
+                startDateStr = toLocalDateString(startDateObj);
+                endDateStr = toLocalDateString(endDateObj);
             } else {
-                startDateStr = currentDate.toISOString().split('T')[0];
-                endDateStr = currentDate.toISOString().split('T')[0];
+                startDateStr = toLocalDateString(currentDate);
+                endDateStr = toLocalDateString(currentDate);
                 const resource = resources[startD];
                 if (resource) rId = resource.id;
             }

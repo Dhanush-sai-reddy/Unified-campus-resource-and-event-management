@@ -11,6 +11,8 @@ const prisma = new PrismaClient();
  * @returns boolean True if a conflict exists
  */
 export async function hasConflict(resourceId: string, startTime: Date, endTime: Date, excludeBookingId?: string): Promise<boolean> {
+    console.log(`[CONFLICT CHECK] Resource=${resourceId}, Request=[${startTime.toISOString()} - ${endTime.toISOString()}]`);
+
     const conflicting = await prisma.resourceBooking.findFirst({
         where: {
             resourceId,
@@ -21,6 +23,12 @@ export async function hasConflict(resourceId: string, startTime: Date, endTime: 
             ],
         },
     });
+
+    if (conflicting) {
+        console.log(`[CONFLICT FOUND] BookingID=${conflicting.id}, Time=[${conflicting.startTime.toISOString()} - ${conflicting.endTime.toISOString()}]`);
+    } else {
+        console.log(`[CONFLICT CHECK] No conflict found.`);
+    }
 
     return conflicting !== null;
 }

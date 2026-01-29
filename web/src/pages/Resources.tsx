@@ -199,6 +199,7 @@ export default function Resources() {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('10:00');
+    const [modalDate, setModalDate] = useState(new Date());
 
     const fetchData = async () => {
         setLoading(true);
@@ -228,6 +229,12 @@ export default function Resources() {
         setSelectedEventId('');
         // Date/Time usually set before calling this or default to now
         if (!selectedDate) setSelectedDate(new Date());
+    };
+
+    const navigateWeek = (direction: number) => {
+        const newDate = new Date(modalDate);
+        newDate.setDate(newDate.getDate() + (direction * 7));
+        setModalDate(newDate);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -541,7 +548,8 @@ export default function Resources() {
                                         {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
                                             <button
                                                 onClick={() => {
-                                                    openBookingForm(resource);
+                                                    setSelectedResource(resource);
+                                                    setViewMode('calendar');
                                                 }}
                                                 disabled={!resource.isAvailable}
                                                 className="flex-1 py-2.5 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-surface-900 text-white hover:bg-surface-800"
@@ -594,17 +602,16 @@ export default function Resources() {
                                         >
                                             <Calendar size={18} />
                                         </button>
-                                        {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
-                                            <button
-                                                onClick={() => {
-                                                    openBookingForm(resource);
-                                                }}
-                                                disabled={!resource.isAvailable}
-                                                className="px-4 py-2 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-primary-600 text-white hover:bg-primary-700"
-                                            >
-                                                {user?.role === 'ADMIN' ? 'Book' : 'Request'}
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => {
+                                                setSelectedResource(resource);
+                                                setViewMode('calendar');
+                                            }}
+                                            disabled={!resource.isAvailable}
+                                            className="px-4 py-2 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-primary-600 text-white hover:bg-primary-700"
+                                        >
+                                            {user?.role === 'ADMIN' ? 'Book' : 'Request'}
+                                        </button>
                                     </div>
                                 </>
                             )}
@@ -664,7 +671,22 @@ export default function Resources() {
                                     </div>
                                     <h3 className="text-xl font-bold text-surface-900">
                                         Availability for {selectedResource.name}
+                                        Availability for {selectedResource.name}
                                     </h3>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <button onClick={() => navigateWeek(-1)} className="p-1 hover:bg-surface-100 rounded">
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        <span className="font-medium">
+                                            {modalDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                        </span>
+                                        <button onClick={() => navigateWeek(1)} className="p-1 hover:bg-surface-100 rounded">
+                                            <ChevronRight size={20} />
+                                        </button>
+                                        <button onClick={() => setModalDate(new Date())} className="text-xs px-2 py-1 bg-surface-100 rounded hover:bg-surface-200">
+                                            Today
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2 items-center">
                                     {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
@@ -687,7 +709,7 @@ export default function Resources() {
                             <div className="flex-1 overflow-hidden p-6 bg-surface-50/30">
                                 <CalendarGrid
                                     viewMode="events" // Use events view to show week/days
-                                    currentDate={new Date()}
+                                    currentDate={modalDate}
                                     events={bookings
                                         .filter(b => b.resourceId === selectedResource.id)
                                         .map(b => ({
@@ -711,9 +733,17 @@ export default function Resources() {
                                     onEventCreate={async (data) => {
                                         if (!selectedResource || !data.title) return;
                                         try {
-                                            const dateStr = data.startDate; // Already YYYY-MM-DD from CalendarGrid
-                                            const startStr = `${dateStr}T${data.startHour.toString().padStart(2, '0')}:00:00.000Z`;
-                                            const endStr = `${dateStr}T${data.endHour.toString().padStart(2, '0')}:00:00.000Z`;
+                                            // Parse "YYYY-MM-DD" explicitly as local parts to avoid UTC shift
+                                            const [year, month, day] = data.startDate.split('-').map(Number);
+
+                                            // Create date at local midnight
+                                            const date = new Date(year, month - 1, day);
+                                            date.setHours(data.startHour, 0, 0, 0);
+                                            const startStr = date.toISOString();
+
+                                            const endDate = new Date(year, month - 1, day);
+                                            endDate.setHours(data.endHour, 0, 0, 0);
+                                            const endStr = endDate.toISOString();
 
                                             await api.createBooking(selectedResource.id, {
                                                 title: data.title,

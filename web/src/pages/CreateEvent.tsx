@@ -138,11 +138,17 @@ export default function CreateEvent() {
             });
 
 
-            await Promise.all(draftBookings.map(draft => {
-                const bStart = new Date(`${draft.startDate}T00:00:00`);
+            // First draft is already booked by createEvent
+            const additionalDrafts = draftBookings.slice(1);
+
+            await Promise.all(additionalDrafts.map(draft => {
+                // Parse date string carefully to avoid timezone shift
+                const [year, month, day] = draft.startDate.split('-').map(Number);
+
+                const bStart = new Date(year, month - 1, day);
                 bStart.setHours(draft.startHour, 0, 0, 0);
 
-                const bEnd = new Date(`${draft.endDate}T00:00:00`);
+                const bEnd = new Date(year, month - 1, day);
                 bEnd.setHours(draft.endHour, 0, 0, 0);
 
                 return api.createBooking(draft.resourceId, {

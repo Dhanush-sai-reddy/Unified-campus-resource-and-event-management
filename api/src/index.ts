@@ -9,7 +9,12 @@ import eventRoutes from './routes/events';
 import resourceRoutes from './routes/resources';
 import notificationRoutes from './routes/notifications';
 import analyticsRoutes from './routes/analytics';
-import { connectBrokers, redisClient, brokersConnected } from './config/brokers';
+/* 
+// Redis adapter logic removed for simplicity
+if (false && brokersConnected && redisClient) {
+   ...
+} 
+*/
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -123,17 +128,8 @@ const startServer = async () => {
     // Try to connect brokers but don't crash if they fail
     // await connectBrokers();
 
-    if (false && brokersConnected && redisClient) {
-        try {
-            const { createAdapter } = await import('@socket.io/redis-adapter');
-            const pubClient = redisClient!.duplicate();
-            const subClient = redisClient!.duplicate();
-            await Promise.all([pubClient.connect(), subClient.connect()]);
-            io.adapter(createAdapter(pubClient, subClient));
-            console.log("Socket.io Redis adapter configured");
-        } catch (e) {
-            console.warn("Redis adapter failed, using default adapter:", e);
-        }
+    if (false) {
+        // Redis adapter setup removed
     }
 
     server.listen(PORT, () => {
