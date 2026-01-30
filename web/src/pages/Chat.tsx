@@ -104,7 +104,7 @@ export default function Chat() {
         return () => {
             socket.disconnect();
         };
-    }, []);
+    }, [currentRoom]);
 
     // Switch rooms
     useEffect(() => {

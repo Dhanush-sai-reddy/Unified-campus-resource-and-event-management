@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { Resource, Booking } from '../types';
 import { useAuth } from '../context/AuthContext';
 import CalendarGrid from '../components/CalendarGrid';
-import { ChevronLeft, Info, Calendar as CalendarIcon, Clock, Trash2, Save, FileText } from 'lucide-react';
+import { ChevronLeft, Calendar as CalendarIcon, Clock, Trash2, Save, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DraftBooking {

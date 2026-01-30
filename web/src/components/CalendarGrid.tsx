@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Event, Booking, Resource } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Server } from 'lucide-react';
@@ -17,7 +17,7 @@ export interface CalendarEvent {
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 8);
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-export const CALENDAR_COLORS = [
+const CALENDAR_COLORS = [
     'bg-blue-500',
     'bg-purple-500',
     'bg-green-500',
@@ -60,7 +60,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         resourceId: ''
     });
 
-    const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
     const calendarRef = useRef<HTMLDivElement>(null);
     const quickAddRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +77,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
 
     // Derived state for events to ensure instant updates from props
     const events = useMemo(() => {
-        let mapped: CalendarEvent[] = [];
+        const mapped: CalendarEvent[] = [];
         const startOfWeek = weekDates[0];
         startOfWeek.setHours(0, 0, 0, 0);
 
@@ -91,7 +91,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                 const startDate = new Date(e.date);
                 const endDate = e.endDate ? new Date(e.endDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
                 const colorIdx = e.id.charCodeAt(0) % CALENDAR_COLORS.length;
-                const color = e.color || CALENDAR_COLORS[colorIdx]; // Respect existing color if provided
+                const color = CALENDAR_COLORS[colorIdx];
 
                 if (endDate < startOfWeek || startDate > endOfWeek) {
                     return;
@@ -248,25 +248,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         const coords = getGridCoordinates(e);
         if (!coords) return;
 
-        if (resizingEvent) {
-            setEvents(prev => prev.map(ev => {
-                if (ev.id !== resizingEvent.id) return ev;
-                if (resizingEvent.edge === 'top') {
-                    const newStart = Math.min(coords.hour, ev.endHour - 1);
-                    return { ...ev, startHour: newStart };
-                } else {
-                    const newEnd = Math.max(coords.hour + 1, ev.startHour + 1);
-                    return { ...ev, endHour: newEnd };
-                }
-            }));
-        } else if (draggingEvent) {
-            setEvents(prev => prev.map(ev => {
-                if (ev.id !== draggingEvent) return ev;
-                const duration = ev.endHour - ev.startHour;
-                const newStart = Math.max(8, Math.min(22 - duration, coords.hour));
-                return { ...ev, day: coords.day, startHour: newStart, endHour: newStart + duration };
-            }));
-        } else if (isSelecting && selectionStart) {
+        if (isSelecting && selectionStart) {
             let targetDay = coords.day;
             // In resource view, lock selection to the starting resource column
             if (viewMode === 'resources') {
@@ -276,7 +258,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         }
     };
 
-    const handleMouseUp = (e: React.MouseEvent) => {
+    const handleMouseUp = (_e: React.MouseEvent) => {
         if (isSelecting && selectionStart && selectionEnd) {
             let startD = selectionStart.day;
             let endD = selectionEnd.day;
@@ -466,7 +448,6 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                             style={{ top, height, left, width: `calc((100% - 60px) / ${colCount} - 4px)`, marginLeft: '2px' }}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedEvent(event);
                                 if (onEventClick) onEventClick(event);
                             }}
                         >

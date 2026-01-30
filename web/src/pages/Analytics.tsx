@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, TrendingUp, Users, Calendar, Building2, DollarSign, Download, Filter, FileSpreadsheet, ChevronDown } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Calendar, Building2, Download, Filter, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

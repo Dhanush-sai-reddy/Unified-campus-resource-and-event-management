@@ -212,13 +212,7 @@ export default function Resources() {
         fetchData();
     }, []);
 
-    const openBookingForm = (resource: Resource) => {
-        setSelectedResource(resource);
-        setIsModalOpen(true);
-        setError(null);
-        setSelectedEventId('');
-        if (!selectedDate) setSelectedDate(new Date());
-    };
+
 
     const navigateWeek = (direction: number) => {
         const newDate = new Date(modalDate);

@@ -2,7 +2,6 @@ export enum UserRole {
   ADMIN = 'ADMIN',
   ORGANIZER = 'ORGANIZER',
   PARTICIPANT = 'PARTICIPANT',
-  STUDENT = 'PARTICIPANT',
 }
 
 export const Role = UserRole;

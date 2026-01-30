@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
 import CreateEvent from './pages/CreateEvent';
 import Resources from './pages/Resources';

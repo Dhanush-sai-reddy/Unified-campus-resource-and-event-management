@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Users, GraduationCap, ArrowRight, Sparkles, Lock, ArrowLeft, KeyRound } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Shield, Users, GraduationCap, ArrowRight, Sparkles, ArrowLeft, KeyRound } from 'lucide-react';
 import { User } from '../types';
 
 interface RoleOption {
