@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Resource, ResourceType, Booking, Event, EventStatus, UserRole } from '../types';
 import { api } from '../services/api';
-import { Monitor, Square, Search, X, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Lock, Plus, Trash2, Calendar, MapPin, Clock } from 'lucide-react';
+import { Monitor, Square, Search, X, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Plus, Trash2, Calendar, MapPin, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import ResourceTimeline from '../components/ResourceTimeline';
-
 import CalendarGrid from '../components/CalendarGrid';
 
 type ViewMode = 'grid' | 'list' | 'timeline' | 'calendar';
@@ -33,7 +32,6 @@ const TIME_SLOTS = [
     '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
 ];
 
-// Mini Calendar Component (omitted for brevity, unchanged)
 function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect: (date: Date) => void }) {
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
 
@@ -44,12 +42,10 @@ function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect
         const lastDay = new Date(year, month + 1, 0);
         const days: (Date | null)[] = [];
 
-        // Add padding for days before first day
         for (let i = 0; i < firstDay.getDay(); i++) {
             days.push(null);
         }
 
-        // Add all days in month
         for (let i = 1; i <= lastDay.getDate(); i++) {
             days.push(new Date(year, month, i));
         }
@@ -81,7 +77,6 @@ function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect
 
     return (
         <div className="bg-surface-50 rounded-xl p-4">
-            {/* Month navigation */}
             <div className="flex items-center justify-between mb-4">
                 <button
                     onClick={() => navigateMonth(-1)}
@@ -100,7 +95,6 @@ function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect
                 </button>
             </div>
 
-            {/* Day headers */}
             <div className="grid grid-cols-7 gap-1 mb-2">
                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
                     <div key={day} className="text-center text-xs font-medium text-surface-500 py-1">
@@ -109,7 +103,6 @@ function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect
                 ))}
             </div>
 
-            {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
                 {days.map((date, i) => (
                     <div key={i} className="aspect-square">
@@ -136,7 +129,6 @@ function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect
     );
 }
 
-// Time Slot Selector
 function TimeSlotSelector({ label, value, onChange }: { label: string; value: string; onChange: (time: string) => void }) {
     return (
         <div>
@@ -162,7 +154,6 @@ function TimeSlotSelector({ label, value, onChange }: { label: string; value: st
 
 export default function Resources() {
     const { user } = useAuth();
-
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -193,7 +184,6 @@ export default function Resources() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-    // Booking form state
     const [eventName, setEventName] = useState('');
     const [selectedEventId, setSelectedEventId] = useState<string>('');
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -227,7 +217,6 @@ export default function Resources() {
         setIsModalOpen(true);
         setError(null);
         setSelectedEventId('');
-        // Date/Time usually set before calling this or default to now
         if (!selectedDate) setSelectedDate(new Date());
     };
 
@@ -241,17 +230,14 @@ export default function Resources() {
         e.preventDefault();
         if (!selectedResource || !user) return;
 
-        // Reset error
         setError(null);
 
-        // Validate times
         if (startTime >= endTime) {
             setError('End time must be after start time');
             return;
         }
 
         try {
-            // Construct dates properly in local time then convert to ISO
             const start = new Date(selectedDate);
             const [startHour, startMin] = startTime.split(':').map(Number);
             start.setHours(startHour, startMin, 0, 0);
@@ -314,7 +300,6 @@ export default function Resources() {
         }
     };
 
-    // Filter resources
     const filteredResources = resources.filter(resource => {
         const matchesCategory =
             categoryFilter === 'all' ||
@@ -331,7 +316,6 @@ export default function Resources() {
         return matchesCategory && matchesSearch && matchesSubCategory;
     });
 
-    // Stats
     const totalRooms = resources.filter(r => r.type === ResourceType.ROOM || r.type === ResourceType.HALL).length;
     const totalEquipment = resources.filter(r => r.type === ResourceType.EQUIPMENT).length;
     const totalLabs = resources.filter(r => r.type === ResourceType.LAB).length;
@@ -349,7 +333,6 @@ export default function Resources() {
 
     return (
         <div className="space-y-8">
-            {/* Header with Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-xl p-4">
                     <div className="flex items-center gap-3">
@@ -389,7 +372,6 @@ export default function Resources() {
                 </motion.div>
             </div>
 
-            {/* Filters */}
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                 <div className="flex flex-wrap gap-2">
                     <button
@@ -441,7 +423,6 @@ export default function Resources() {
                 </div>
             </div>
 
-            {/* Sub-category chips */}
             {categoryFilter !== 'all' && (
                 <div className="flex flex-wrap gap-2">
                     <button
@@ -464,7 +445,6 @@ export default function Resources() {
                 </div>
             )}
 
-            {/* Resources View */}
             {loading ? (
                 <div className="flex justify-center py-20">
                     <div className="w-12 h-12 rounded-full border-4 border-surface-200 border-t-primary-600 animate-spin"></div>
@@ -474,7 +454,6 @@ export default function Resources() {
                     resources={filteredResources}
                     bookings={bookings}
                     onBookClick={(_) => {
-                        // Handle booking click if needed
                     }}
                 />
             ) : viewMode === 'calendar' ? (
@@ -482,11 +461,10 @@ export default function Resources() {
                     <CalendarGrid
                         viewMode="resources"
                         currentDate={new Date()}
-                        events={[]} // We rely on bookings for resource view
+                        events={[]}
                         bookings={bookings}
                         resources={filteredResources}
                         onEventCreate={async (data) => {
-                            // Pre-fill booking modal
                             const resource = resources.find(r => r.id === data.resourceId);
                             if (resource) {
                                 setSelectedResource(resource);
@@ -496,7 +474,7 @@ export default function Resources() {
                                 setEndTime(`${data.endHour.toString().padStart(2, '0')}:00`);
                             }
                         }}
-                        disableQuickAdd={true} // Use our modal instead
+                        disableQuickAdd={true}
                     />
                 </div>
             ) : (
@@ -637,7 +615,6 @@ export default function Resources() {
                 )
             }
 
-            {/* Resource Calendar Modal */}
             <AnimatePresence>
                 {selectedResource && viewMode === 'calendar' && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -647,7 +624,7 @@ export default function Resources() {
                             exit={{ opacity: 0 }}
                             onClick={() => {
                                 setSelectedResource(null);
-                                setViewMode('grid'); // Go back to grid when closing
+                                setViewMode('grid');
                             }}
                             className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm"
                         />
@@ -708,7 +685,7 @@ export default function Resources() {
 
                             <div className="flex-1 overflow-hidden p-6 bg-surface-50/30">
                                 <CalendarGrid
-                                    viewMode="events" // Use events view to show week/days
+                                    viewMode="events"
                                     currentDate={modalDate}
                                     events={bookings
                                         .filter(b => b.resourceId === selectedResource.id)
@@ -733,10 +710,8 @@ export default function Resources() {
                                     onEventCreate={async (data) => {
                                         if (!selectedResource || !data.title) return;
                                         try {
-                                            // Parse "YYYY-MM-DD" explicitly as local parts to avoid UTC shift
                                             const [year, month, day] = data.startDate.split('-').map(Number);
 
-                                            // Create date at local midnight
                                             const date = new Date(year, month - 1, day);
                                             date.setHours(data.startHour, 0, 0, 0);
                                             const startStr = date.toISOString();
@@ -766,11 +741,9 @@ export default function Resources() {
                 )}
             </AnimatePresence>
 
-            {/* Existing Booking Modal (unchanged) */}
             <AnimatePresence>
                 {isModalOpen && selectedResource && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        {/* ... (keep existing modal content) ... */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -804,17 +777,14 @@ export default function Resources() {
                                 )}
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Left: Calendar */}
                                     <div>
                                         <label className="block text-sm font-medium text-surface-700 mb-2">Select Date</label>
                                         <MiniCalendar selectedDate={selectedDate} onSelect={setSelectedDate} />
                                         <p className="mt-3 text-sm text-surface-600 flex items-center gap-2">
-                                            {/* Clock icon removed to avoid import error */}
                                             Selected: {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                                         </p>
                                     </div>
 
-                                    {/* Right: Event details and time */}
                                     <div className="space-y-5">
                                         <div>
                                             <label className="block text-sm font-medium text-surface-700 mb-2">Parent Event (Optional)</label>
@@ -875,7 +845,6 @@ export default function Resources() {
                 )}
             </AnimatePresence>
 
-            {/* Add Resource Modal */}
             <AnimatePresence>
                 {isAddModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

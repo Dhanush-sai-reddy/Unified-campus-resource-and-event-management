@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Event, Booking, Resource } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Server } from 'lucide-react';
@@ -41,18 +41,13 @@ interface CalendarGridProps {
 }
 
 export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, bookings, resources, onEventCreate, onEventClick, onEventUpdate, disableQuickAdd, readOnly }: CalendarGridProps) {
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
-
-
     const [draggingEvent, setDraggingEvent] = useState<string | null>(null);
     const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom' } | null>(null);
-
     const [dragStartSnapshot, setDragStartSnapshot] = useState<CalendarEvent | null>(null);
 
     const [isSelecting, setIsSelecting] = useState(false);
     const [selectionStart, setSelectionStart] = useState<{ day: number, hour: number } | null>(null);
     const [selectionEnd, setSelectionEnd] = useState<{ day: number, hour: number } | null>(null);
-
 
     const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [popoverPosition, setPopoverPosition] = useState<{ top: number, left: number } | null>(null);
@@ -69,7 +64,6 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
     const calendarRef = useRef<HTMLDivElement>(null);
     const quickAddRef = useRef<HTMLDivElement>(null);
 
-
     const getWeekDates = () => {
         const start = new Date(currentDate);
         start.setDate(start.getDate() - start.getDay());
@@ -79,33 +73,29 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             return date;
         });
     };
-    const weekDates = getWeekDates();
+    const weekDates = getWeekDates(); // Use memo if needed, but simple function here is fine for now
 
-
-    useEffect(() => {
+    // Derived state for events to ensure instant updates from props
+    const events = useMemo(() => {
+        let mapped: CalendarEvent[] = [];
         const startOfWeek = weekDates[0];
         startOfWeek.setHours(0, 0, 0, 0);
 
         const endOfWeek = new Date(weekDates[6]);
         endOfWeek.setHours(23, 59, 59, 999);
 
-        let mapped: CalendarEvent[] = [];
-
         if (viewMode === 'events') {
-            if (dbEvents.length === 0) return;
+            if (dbEvents.length === 0) return [];
 
             dbEvents.forEach(e => {
                 const startDate = new Date(e.date);
                 const endDate = e.endDate ? new Date(e.endDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
                 const colorIdx = e.id.charCodeAt(0) % CALENDAR_COLORS.length;
-                const color = CALENDAR_COLORS[colorIdx];
+                const color = e.color || CALENDAR_COLORS[colorIdx]; // Respect existing color if provided
 
                 if (endDate < startOfWeek || startDate > endOfWeek) {
-                    console.log(`[DEBUG] Skipping event ${e.title}: Range ${startDate.toISOString()}-${endDate.toISOString()} outside week ${startOfWeek.toISOString()}-${endOfWeek.toISOString()}`);
                     return;
                 }
-
-                console.log(`[DEBUG] Processing event ${e.title} for week ${startOfWeek.toISOString()}`);
 
                 for (let i = 0; i < 7; i++) {
                     const currentDayDate = new Date(weekDates[i]);
@@ -114,7 +104,6 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                     nextDayDate.setDate(nextDayDate.getDate() + 1);
 
                     if (startDate < nextDayDate && endDate > currentDayDate) {
-                        console.log(`[DEBUG] Event ${e.title} overlaps day ${i} (${currentDayDate.toISOString()})`);
                         let startH = 8;
                         let endH = 22;
 
@@ -188,7 +177,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                 });
             }
         }
-        setEvents(mapped);
+        return mapped;
     }, [dbEvents, bookings, currentDate, viewMode, resources, weekDates]);
 
 
@@ -278,7 +267,12 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                 return { ...ev, day: coords.day, startHour: newStart, endHour: newStart + duration };
             }));
         } else if (isSelecting && selectionStart) {
-            setSelectionEnd({ day: coords.day, hour: coords.hour });
+            let targetDay = coords.day;
+            // In resource view, lock selection to the starting resource column
+            if (viewMode === 'resources') {
+                targetDay = selectionStart.day;
+            }
+            setSelectionEnd({ day: targetDay, hour: coords.hour });
         }
     };
 

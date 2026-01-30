@@ -137,12 +137,9 @@ export default function CreateEvent() {
                 clubName: eventClub
             });
 
-
-            // First draft is already booked by createEvent
             const additionalDrafts = draftBookings.slice(1);
 
             await Promise.all(additionalDrafts.map(draft => {
-                // Parse date string carefully to avoid timezone shift
                 const [year, month, day] = draft.startDate.split('-').map(Number);
 
                 const bStart = new Date(year, month - 1, day);
@@ -163,7 +160,7 @@ export default function CreateEvent() {
             navigate('/calendar');
         } catch (err: any) {
             console.error("Failed to create event", err);
-            const errorMessage = err.message || "Failed to create event. There might be a conflict.";
+            const errorMessage = err.response?.data?.error || err.message || "Failed to create event.";
             alert(errorMessage);
             setIsSubmitting(false);
         }
@@ -271,6 +268,7 @@ export default function CreateEvent() {
                             </div>
                             <div className="flex-1 overflow-auto">
                                 <CalendarGrid
+                                    key={selectedResourceId}
                                     viewMode="events"
                                     disableQuickAdd={true}
                                     currentDate={viewDate}

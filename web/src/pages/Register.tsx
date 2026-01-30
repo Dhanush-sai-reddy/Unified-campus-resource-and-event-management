@@ -109,7 +109,6 @@ export default function Register() {
                 </div>
             </div>
 
-            {/* Right side - Register form */}
             <div className="flex-1 flex items-center justify-center p-8 bg-surface-50">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

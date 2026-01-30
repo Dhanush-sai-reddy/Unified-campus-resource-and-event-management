@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Users, Search, Grid, List, ChevronRight, X, MessageCircle } from 'lucide-react';
-import { Event, EventStatus, Booking } from '../types';
+import { Event, EventStatus, Booking, UserRole } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { UserRole } from '../types';
 
 const statusColors: Record<EventStatus, string> = {
     [EventStatus.DRAFT]: 'bg-surface-100 text-surface-600',
@@ -16,6 +15,7 @@ const statusColors: Record<EventStatus, string> = {
 };
 
 function EventCard({ event, onViewDetails }: { event: Event, onViewDetails: (event: Event) => void }) {
+    const { user } = useAuth();
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -23,18 +23,18 @@ function EventCard({ event, onViewDetails }: { event: Event, onViewDetails: (eve
             whileHover={{ y: -4 }}
             className="glass-card rounded-2xl overflow-hidden group"
         >
-            {/* ... existing card content ... */}
             <div className="h-32 bg-gradient-to-br from-primary-500 to-indigo-600 relative">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="absolute bottom-4 left-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[event.status]}`}>
-                        {event.status}
-                    </span>
+                    {user?.role !== UserRole.PARTICIPANT && (
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[event.status]}`}>
+                            {event.status}
+                        </span>
+                    )}
                 </div>
             </div>
 
             <div className="p-5">
-                {/* ... existing info ... */}
                 <div className="flex items-start justify-between mb-3">
                     <div>
                         <h3 className="font-bold text-lg text-surface-900 group-hover:text-primary-600 transition-colors">
@@ -78,15 +78,14 @@ function EventCard({ event, onViewDetails }: { event: Event, onViewDetails: (eve
 }
 
 export default function Events() {
+    const { user } = useAuth();
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [statusFilter, setStatusFilter] = useState<string>(user?.role === UserRole.PARTICIPANT ? EventStatus.APPROVED : 'all');
     const [searchQuery, setSearchQuery] = useState('');
-    const { user } = useAuth();
     const navigate = useNavigate();
 
-    // Modal State
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [eventBookings, setEventBookings] = useState<Booking[]>([]);
     const [loadingResources, setLoadingResources] = useState(false);
@@ -95,9 +94,8 @@ export default function Events() {
         setSelectedEvent(event);
         setLoadingResources(true);
         try {
-
             const allBookings = await api.getBookings();
-            const relevant = allBookings.filter(b => (b as any).eventName === event.title || b.title === event.title || b.eventId === event.id); // Check variations for mock data compatibility
+            const relevant = allBookings.filter(b => (b as any).eventName === event.title || b.title === event.title || b.eventId === event.id);
             setEventBookings(relevant);
         } catch (e) {
             console.error(e);
@@ -110,13 +108,10 @@ export default function Events() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Pass statusFilter to API (if 'all', pass undefined to get default or handle on server, 
-                // but server defaults to APPROVED. We want 'all' to maybe mean fetch all? 
-                // Actually, if we want to search across all, we might need a specific param or let 'all' be undefined but server logic defaults to approved.
-                // Let's make 'all' fetch everything for Admins? Or just loop?
-                // For now, let's map 'all' to undefined (which gets APPROVED) or we need a way to get EVERYTHING.
-                // But wait, user wants to see Pending.
-                const statusArg = statusFilter === 'all' ? undefined : statusFilter;
+                let statusArg = statusFilter === 'all' ? 'ALL' : statusFilter;
+                if (user?.role === UserRole.PARTICIPANT) {
+                    statusArg = EventStatus.APPROVED;
+                }
                 const data = await api.getEvents(statusArg);
                 setEvents(data);
             } catch (err) {
@@ -125,16 +120,26 @@ export default function Events() {
             setLoading(false);
         };
         fetchData();
-    }, [statusFilter]);
+    }, [statusFilter, user]);
 
     const filteredEvents = events.filter(event => {
+        if (user?.role === UserRole.PARTICIPANT) {
+            if (event.status !== EventStatus.APPROVED) return false;
+        }
+
         const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             event.clubName.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesStatus && matchesSearch;
+
+        if (!matchesStatus || !matchesSearch) return false;
+
+        if (user?.role !== UserRole.ADMIN && user?.role !== UserRole.PARTICIPANT) {
+            const isPrivate = [EventStatus.DRAFT, EventStatus.PENDING, EventStatus.REJECTED].includes(event.status);
+            if (isPrivate && event.organizerId !== user?.id) return false;
+        }
+
+        return true;
     });
-
-
 
     const container = {
         hidden: { opacity: 0 },
@@ -143,22 +148,22 @@ export default function Events() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-display font-bold text-surface-900">Events</h1>
                     <p className="text-surface-500 mt-1">Discover and manage campus events</p>
                 </div>
-                <button
-                    onClick={() => navigate('/events/new')}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-colors font-medium flex items-center gap-2"
-                >
-                    <Calendar size={18} />
-                    Create Event
-                </button>
+                {user?.role !== UserRole.PARTICIPANT && (
+                    <button
+                        onClick={() => navigate('/events/new')}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-colors font-medium flex items-center gap-2"
+                    >
+                        <Calendar size={18} />
+                        Create Event
+                    </button>
+                )}
             </div>
 
-            {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <div className="relative flex-1 w-full sm:max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={18} />
@@ -172,17 +177,19 @@ export default function Events() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2.5 rounded-xl border border-surface-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                    >
-                        <option value="all">All Status</option>
-                        <option value={EventStatus.APPROVED}>Approved</option>
-                        <option value={EventStatus.PENDING}>Pending</option>
-                        <option value={EventStatus.DRAFT}>Draft</option>
-                        <option value={EventStatus.COMPLETED}>Completed</option>
-                    </select>
+                    {user?.role !== UserRole.PARTICIPANT && (
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="px-4 py-2.5 rounded-xl border border-surface-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                        >
+                            <option value="all">All Status</option>
+                            <option value={EventStatus.APPROVED}>Approved</option>
+                            <option value={EventStatus.PENDING}>Pending</option>
+                            <option value={EventStatus.DRAFT}>Draft</option>
+                            <option value={EventStatus.COMPLETED}>Completed</option>
+                        </select>
+                    )}
 
                     <div className="flex rounded-xl border border-surface-200 bg-white overflow-hidden">
                         <button
@@ -201,7 +208,6 @@ export default function Events() {
                 </div>
             </div>
 
-            {/* Events grid */}
             {loading ? (
                 <div className="flex justify-center py-20">
                     <div className="w-12 h-12 rounded-full border-4 border-surface-200 border-t-primary-600 animate-spin"></div>
@@ -227,7 +233,6 @@ export default function Events() {
                     ))}
                 </motion.div>
             )}
-            {/* Event Details Modal */}
             <AnimatePresence>
                 {selectedEvent && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -254,13 +259,11 @@ export default function Events() {
                             </div>
 
                             <div className="p-6 space-y-6">
-                                {/* Event Description */}
                                 <div>
                                     <h4 className="text-sm font-semibold text-surface-700 mb-2">About Event</h4>
                                     <p className="text-surface-600 leading-relaxed text-sm">{selectedEvent.description}</p>
                                 </div>
 
-                                {/* Event Info Grid */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-3 bg-surface-50 rounded-xl">
                                         <div className="flex items-center gap-2 text-surface-500 text-xs mb-1">
@@ -282,7 +285,6 @@ export default function Events() {
                                     </div>
                                 </div>
 
-                                {/* Allocated Resources */}
                                 <div>
                                     <h4 className="text-sm font-semibold text-surface-700 mb-3 flex items-center gap-2">
                                         <Grid size={16} className="text-primary-600" />

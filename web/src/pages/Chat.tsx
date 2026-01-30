@@ -64,6 +64,29 @@ export default function Chat() {
     }, [eventId, eventName]);
 
     useEffect(() => {
+        // Fetch approved events to list as rooms
+        const fetchEventRooms = async () => {
+            try {
+                const events = await api.getEvents('APPROVED');
+                const eventRooms: ChatRoom[] = events.map(e => ({
+                    id: `event_${e.id}`,
+                    name: e.title,
+                    type: 'event',
+                    icon: <Calendar size={18} />
+                }));
+
+                setRooms(prev => {
+                    // Filter out duplicates based on ID
+                    const existingIds = new Set(prev.map(r => r.id));
+                    const newRooms = eventRooms.filter(r => !existingIds.has(r.id));
+                    return [...prev, ...newRooms];
+                });
+            } catch (err) {
+                console.error("Failed to fetch event rooms", err);
+            }
+        };
+        fetchEventRooms();
+
         const socket = io(SOCKET_URL);
         socketRef.current = socket;
 

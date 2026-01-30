@@ -46,10 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const data = await response.json();
-        // For OTP flow, we return the data instead of setting it immediately if needed, 
-        // but here we maintain current behavior for other components and add a helper logic if needed.
-        // Actually, for OTP we will bypass this 'login' function in the component and use 'verifyLogin' logic there,
-        // then call 'completeLogin' here.
         localStorage.setItem('token', data.token);
         setUser(data.user);
         return data;

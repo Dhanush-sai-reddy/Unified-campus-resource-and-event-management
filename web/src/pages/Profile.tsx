@@ -1,10 +1,26 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { Mail, Building, Calendar, Users, Edit2, Camera, Trophy, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { api } from '../services/api';
+import { Event } from '../types';
 
 export default function Profile() {
     const { user } = useAuth();
+    const [recentEvents, setRecentEvents] = useState<Event[]>([]);
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                const events = await api.getMyEvents();
+                setRecentEvents(events);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchEvents();
+    }, []);
 
     const memberships = [
         { name: 'Coding Club', role: 'Member', since: 'Aug 2024' },
@@ -13,36 +29,26 @@ export default function Profile() {
     ];
 
     const stats = [
-        { label: 'Events Attended', value: 12, icon: <Calendar size={18} /> },
+        { label: 'Events Attended', value: recentEvents.length, icon: <Calendar size={18} /> },
         { label: 'Events Organized', value: 3, icon: <Star size={18} /> },
         { label: 'Club Memberships', value: 3, icon: <Users size={18} /> },
         { label: 'Achievements', value: 5, icon: <Trophy size={18} /> },
-    ];
-
-    const recentActivity = [
-        { action: 'Attended AI Workshop', date: 'Jan 20, 2026' },
-        { action: 'Joined AI Society', date: 'Jan 15, 2026' },
-        { action: 'Booked Auditorium A', date: 'Jan 10, 2026' },
-        { action: 'Registered for HackOverflow', date: 'Jan 5, 2026' },
     ];
 
     if (!user) return null;
 
     return (
         <div className="space-y-8">
-            {/* Profile Header */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card rounded-2xl overflow-hidden"
             >
-                {/* Cover */}
                 <div className="h-32 bg-gradient-to-r from-primary-500 via-indigo-500 to-purple-500 relative">
                     <div className="absolute inset-0 bg-black/10"></div>
                 </div>
 
                 <div className="px-8 pb-8 relative">
-                    {/* Avatar */}
                     <div className="absolute -top-16 left-8">
                         <div className="relative">
                             <img
@@ -56,7 +62,6 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    {/* Info */}
                     <div className="pt-20 flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <div>
                             <h1 className="text-2xl font-display font-bold text-surface-900">{user.name}</h1>
@@ -86,7 +91,6 @@ export default function Profile() {
                 </div>
             </motion.div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {stats.map((stat, i) => (
                     <motion.div
@@ -106,7 +110,6 @@ export default function Profile() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Club Memberships */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -141,7 +144,6 @@ export default function Profile() {
                     </div>
                 </motion.div>
 
-                {/* Recent Activity */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -153,15 +155,19 @@ export default function Profile() {
                         Recent Activity
                     </h2>
                     <div className="space-y-1">
-                        {recentActivity.map((item, i) => (
-                            <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-50 transition-colors">
+                        {recentEvents.length > 0 ? recentEvents.map((event) => (
+                            <div key={event.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-50 transition-colors">
                                 <div className="w-2 h-2 rounded-full bg-primary-500"></div>
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-surface-900">{item.action}</p>
-                                    <p className="text-xs text-surface-500">{item.date}</p>
+                                    <p className="text-sm font-medium text-surface-900">Registered for {event.title}</p>
+                                    <p className="text-xs text-surface-500">
+                                        {new Date(event.date).toLocaleDateString()}
+                                    </p>
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="text-surface-500 text-sm">No recent activity.</p>
+                        )}
                     </div>
                 </motion.div>
             </div>

@@ -116,7 +116,6 @@ export default function Dashboard() {
 
     return (
         <div className="space-y-8">
-            {/* Welcome section */}
             <div className="glass-card rounded-2xl p-8 bg-gradient-to-r from-primary-50 to-indigo-50 border-primary-100">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
@@ -141,7 +140,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Stats grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Total Events"
@@ -178,7 +176,6 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Quick Actions */}
                 <div className="lg:col-span-2 space-y-4">
                     <h2 className="text-lg font-display font-semibold text-surface-900">Quick Actions</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -215,7 +212,6 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Recent Activity */}
                 <div className="space-y-4">
                     <h2 className="text-lg font-display font-semibold text-surface-900">Recent Activity</h2>
                     <div className="glass-card rounded-2xl p-5">

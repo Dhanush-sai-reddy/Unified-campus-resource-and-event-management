@@ -5,7 +5,6 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get all users (admin only)
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const users = await prisma.user.findMany({

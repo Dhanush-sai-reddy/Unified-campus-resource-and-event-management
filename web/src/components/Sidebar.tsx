@@ -40,14 +40,10 @@ export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    console.log('Sidebar: Current User:', user);
-    console.log('Sidebar: User Role:', user?.role);
-
     const filteredItems = navItems.filter(
         item => {
             if (!item.roles) return true;
             const hasRole = user && item.roles.includes(user.role);
-            // console.log(`Checking item ${item.label}: User Role: ${user?.role}, Required Roles: ${item.roles}, Allowed: ${hasRole}`);
             return hasRole;
         }
     );

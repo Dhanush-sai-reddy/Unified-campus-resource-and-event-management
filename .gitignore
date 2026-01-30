@@ -1,39 +1,59 @@
 # Dependencies
 node_modules/
+.pnp
+.pnp.js
 
-# Build
-dist/
+# Testing
+coverage/
+
+# Production
 build/
+dist/
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Logs
-audit-logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Environment
-.env
-.env.local
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Local artifacts
-build_log.txt
-hash.txt
+logs/
 *.log
 
-# Go binaries
-*.exe
-*.test
-scheduler/main
-scheduler/scheduler
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
 
-# Testing/Verification scripts (optional)
+# OS
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Docker
+docker-data/
+
+# Temporary Scripts & Data
+build_log.txt
+hash.txt
 verify_creation.js
 verify_system.ps1
+fix_db.sql
+truncate_events.sql
+populate_resources.sql
+
+# Go
+bin/
+*.exe
+*.test
+scheduler/scheduler
+

@@ -160,12 +160,10 @@ router.get('/:id/availability', async (req, res) => {
     }
 });
 
-// Create booking (ORGANIZER or ADMIN only)
 router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { title, purpose, startTime, endTime, eventId } = req.body;
 
-        // Check user role - only ADMIN and ORGANIZER can book resources
         const user = await prisma.user.findUnique({ where: { id: req.userId } });
         if (!user || (user.role !== 'ADMIN' && user.role !== 'ORGANIZER')) {
             return res.status(403).json({ error: 'Only organizers and admins can book resources' });
@@ -178,9 +176,9 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
             return res.status(400).json({ error: 'End time must be after start time' });
         }
 
-        // Check for conflicts
         if (await hasConflict(req.params.id, start, end)) {
-            return res.status(409).json({ error: 'Time slot conflicts with existing booking' });
+            console.log(`[API CONFLICT] Blocked booking for Resource ${req.params.id} at ${start.toISOString()}`);
+            return res.status(409).json({ error: 'Time slot conflict' });
         }
 
         // Get resource to check if approval is required

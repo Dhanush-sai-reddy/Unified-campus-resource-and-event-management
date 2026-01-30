@@ -37,9 +37,18 @@ router.get('/', async (req, res) => {
         const { status, clubId } = req.query;
 
         // Default to APPROVED if no status provided
-        const whereClause: any = {
-            status: status ? (status as any) : 'APPROVED',
+        let whereClause: any = {
+            status: 'APPROVED',
         };
+
+        if (status) {
+            const statuses = (status as string).split(',');
+            if (statuses.includes('ALL')) {
+                delete whereClause.status;
+            } else {
+                whereClause.status = { in: statuses };
+            }
+        }
 
         if (clubId) {
             whereClause.clubId = clubId as string;
@@ -134,7 +143,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
                 isMultiDay: isMultiDay || false,
                 organizerId: req.userId!,
                 clubId,
-                status: 'PENDING', // Default to PENDING for approval workflow
+                status: req.userRole === 'ADMIN' ? 'APPROVED' : 'PENDING',
                 ...(bookingData && { resourceBookings: bookingData }),
             },
             include: {

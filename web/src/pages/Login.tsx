@@ -73,23 +73,6 @@ export default function Login() {
         setError(null);
 
         try {
-            // STEP 1: Verify Credentials First
-            // We use the auth context login method but we need to intercept the result
-            // Since we modified login to return data, we can use that.
-            // Or we can just call it to verify credentials.
-            // Wait, standard login() sets state. We want to avoid setting state until OTP.
-            // But we modified context to return data.
-            // However, context login() sets state immediately as per our modification earlier?
-            // Let's check... Ah, I should have modified login() to NOT set user if I wanted this flow perfectly.
-            // But I returned data. 
-            // Actually, for this specific flow, let's just simulate the "2-step" by:
-            // 1. Calling api directly here to validate without setting context
-            // 2. Or, simpler: Just show OTP for everyone "before" calling login?
-            // No, that's fake.
-            // Let's try to call the login() and if it works, we immediately logout() internally? No that causes flicker.
-            // Best way: Don't use context.login() for step 1. Use fetch directly.
-
-            // Direct fetch to validate credentials
             const response = await fetch('http://localhost:5000/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -101,7 +84,6 @@ export default function Login() {
             const data = await response.json();
             setPendingAuth({ user: data.user, token: data.token });
 
-            // Proceed to OTP Step
             setLoading(false);
             setShowOTP(true);
             setTimer(30);
@@ -122,7 +104,6 @@ export default function Login() {
         newOTP[index] = value;
         setOTP(newOTP);
 
-        // Auto-focus next input
         if (value && index < 5) {
             const nextInput = document.getElementById(`otp-${index + 1}`);
             nextInput?.focus();
@@ -140,10 +121,8 @@ export default function Login() {
 
         setLoading(true);
 
-        // Simulate OTP verification delay
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        // For demo: Accept any 6-digit code, or specific one "123456"
         if (otpValue === '123456') {
             if (pendingAuth) {
                 loginWithData(pendingAuth.user, pendingAuth.token);
@@ -159,7 +138,6 @@ export default function Login() {
         setTimer(30);
         setOTP(['', '', '', '', '', '']);
         setError(null);
-        // In real app, trigger API to resend
     };
 
     const container = {
@@ -264,17 +242,14 @@ export default function Login() {
         );
     }
 
-    // Default Role Selection View
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            {/* Animated background elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-pulse"></div>
                 <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-primary-500/5 to-transparent rounded-full"></div>
             </div>
 
-            {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -293,7 +268,6 @@ export default function Login() {
                 </p>
             </motion.div>
 
-            {/* Error Message */}
             {error && (
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -304,7 +278,6 @@ export default function Login() {
                 </motion.div>
             )}
 
-            {/* Role Selection */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

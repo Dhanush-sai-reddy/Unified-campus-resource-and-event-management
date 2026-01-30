@@ -2,15 +2,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart3, TrendingUp, Users, Calendar, Building2, DollarSign, Download, Filter, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-// Initial empty states
 const defaultStats = {
     totalEvents: 0,
     totalUsers: 0,
     totalResources: 0,
     pendingBookings: 0,
-    // Add others as needed depending on backend response
 };
 
 interface StatCardProps {
@@ -43,9 +43,10 @@ function StatCard({ title, value, change, icon, color }: StatCardProps) {
 }
 
 export default function Analytics() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [showExportMenu, setShowExportMenu] = useState(false);
 
-    // Data State
     const [stats, setStats] = useState<any>(defaultStats);
     const [eventTrends, setEventTrends] = useState<any[]>([]);
     const [resourceUtilization, setResourceUtilization] = useState<any[]>([]);
@@ -53,6 +54,11 @@ export default function Analytics() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (user && user.role === 'PARTICIPANT') {
+            navigate('/dashboard');
+            return;
+        }
+
         const fetchData = async () => {
             try {
                 const [dashStats, trends, resources, clubs] = await Promise.all([
@@ -64,7 +70,6 @@ export default function Analytics() {
 
                 setStats(dashStats);
 
-                // Format Trends
                 const trendData = Object.keys(trends).map(month => ({
                     month,
                     events: trends[month].events,
@@ -72,7 +77,6 @@ export default function Analytics() {
                 })).sort((a, b) => a.month.localeCompare(b.month));
                 setEventTrends(trendData);
 
-                // Format Resources
                 const resData = resources.map((r: any, i: number) => ({
                     name: r.name,
                     value: r.totalBookings,
@@ -88,13 +92,12 @@ export default function Analytics() {
             }
         };
         fetchData();
-    }, []);
+    }, [user, navigate]);
 
     if (loading) return <div className="p-8 text-center text-surface-500">Loading analytics...</div>;
 
     return (
         <div className="space-y-8">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-display font-bold text-surface-900">Analytics Dashboard</h1>
@@ -148,7 +151,6 @@ export default function Analytics() {
                 </div>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Total Events"
@@ -181,7 +183,6 @@ export default function Analytics() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Events Over Time */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -209,7 +210,6 @@ export default function Analytics() {
                     </ResponsiveContainer>
                 </motion.div>
 
-                {/* Participation Trend */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -238,7 +238,6 @@ export default function Analytics() {
                     </ResponsiveContainer>
                 </motion.div>
 
-                {/* Resource Utilization */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -286,7 +285,6 @@ export default function Analytics() {
                     </div>
                 </motion.div>
 
-                {/* Club Activity */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

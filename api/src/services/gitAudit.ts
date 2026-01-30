@@ -5,13 +5,11 @@ import path from 'path';
 const AUDIT_DIR = process.env.AUDIT_DIR || './audit-logs';
 let git: SimpleGit | null = null;
 
-// Initialize git repo for audit logs
 async function initAuditRepo() {
     try {
         await fs.mkdir(AUDIT_DIR, { recursive: true });
         git = simpleGit(AUDIT_DIR);
 
-        // Check if already a git repo
         const isRepo = await git.checkIsRepo();
         if (!isRepo) {
             await git.init();
@@ -24,7 +22,6 @@ async function initAuditRepo() {
     }
 }
 
-// Initialize on module load
 initAuditRepo();
 
 interface AuditEntry {
@@ -33,7 +30,6 @@ interface AuditEntry {
     data: any;
 }
 
-// Log an action to the audit trail
 export async function auditLog(action: string, data: any): Promise<void> {
     try {
         if (!git) {
@@ -43,25 +39,20 @@ export async function auditLog(action: string, data: any): Promise<void> {
         const timestamp = new Date().toISOString();
         const entry: AuditEntry = { timestamp, action, data };
 
-        // Create daily log file
         const dateStr = timestamp.split('T')[0];
         const logFile = path.join(AUDIT_DIR, `${dateStr}.json`);
 
-        // Read existing entries or create new array
         let entries: AuditEntry[] = [];
         try {
             const content = await fs.readFile(logFile, 'utf-8');
             entries = JSON.parse(content);
         } catch {
-            // File doesn't exist yet
         }
 
         entries.push(entry);
 
-        // Write updated log
         await fs.writeFile(logFile, JSON.stringify(entries, null, 2));
 
-        // Commit to git
         if (git) {
             await git.add('.');
             await git.commit(`${action}: ${JSON.stringify(data).slice(0, 50)}...`);
@@ -73,7 +64,6 @@ export async function auditLog(action: string, data: any): Promise<void> {
     }
 }
 
-// Get audit history
 export async function getAuditHistory(days: number = 7): Promise<AuditEntry[]> {
     const entries: AuditEntry[] = [];
 
@@ -93,7 +83,6 @@ export async function getAuditHistory(days: number = 7): Promise<AuditEntry[]> {
     return entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
-// Get git commit history
 export async function getCommitHistory(limit: number = 50): Promise<any[]> {
     try {
         if (!git) {
@@ -108,7 +97,6 @@ export async function getCommitHistory(limit: number = 50): Promise<any[]> {
     }
 }
 
-// Rollback to a specific commit (for disaster recovery)
 export async function rollbackToCommit(commitHash: string): Promise<boolean> {
     try {
         if (!git) return false;

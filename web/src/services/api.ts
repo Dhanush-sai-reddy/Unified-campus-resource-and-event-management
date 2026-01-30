@@ -10,7 +10,6 @@ const getHeaders = () => {
 };
 
 export const api = {
-    // Auth
     getCurrentUser: async () => {
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
             headers: getHeaders(),
@@ -19,7 +18,6 @@ export const api = {
         return response.json();
     },
 
-    // Events
     getEvents: async (status?: string): Promise<Event[]> => {
         const query = status ? `?status=${status}` : '';
         const response = await fetch(`${API_BASE_URL}/events${query}`, {
@@ -37,7 +35,6 @@ export const api = {
         return response.json();
     },
 
-    // Resources & Bookings
     getResources: async (): Promise<any[]> => {
         const response = await fetch(`${API_BASE_URL}/resources?available=true`, {
             headers: getHeaders(),
@@ -79,7 +76,7 @@ export const api = {
         status?: string;
         resourceId?: string;
         upcoming?: boolean;
-        date?: string; // Optional filtering on client side if needed, but backend supports other filters
+        date?: string;
     }): Promise<Booking[]> => {
         const query = new URLSearchParams(params as any).toString();
         const response = await fetch(`${API_BASE_URL}/resources/bookings/all?${query}`, {
@@ -177,7 +174,6 @@ export const api = {
         return response.json();
     },
 
-    // Notifications
     getNotifications: async (): Promise<Notification[]> => {
         const response = await fetch(`${API_BASE_URL}/notifications`, {
             headers: getHeaders(),
@@ -195,7 +191,6 @@ export const api = {
         return response.json();
     },
 
-    // Chat
     getChatHistory: async (roomId: string): Promise<any[]> => {
         const response = await fetch(`${API_BASE_URL}/chat/${roomId}`, {
             headers: getHeaders(),
@@ -204,7 +199,6 @@ export const api = {
         return response.json();
     },
 
-    // Analytics
     getDashboardStats: async () => {
         const response = await fetch(`${API_BASE_URL}/analytics/dashboard`, { headers: getHeaders() });
         if (!response.ok) throw new Error('Failed to fetch dashboard stats');
@@ -235,12 +229,10 @@ export const api = {
         return response.json();
     },
 
-    // Exports
     exportData: async (type: 'events' | 'users' | 'bookings' | 'clubs') => {
         const response = await fetch(`${API_BASE_URL}/analytics/export/${type}`, { headers: getHeaders() });
         if (!response.ok) throw new Error(`Failed to export ${type}`);
 
-        // Handle file download
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');

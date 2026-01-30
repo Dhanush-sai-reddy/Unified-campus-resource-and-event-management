@@ -109,13 +109,11 @@ router.post('/announce', authenticateToken, requireRole('ADMIN'), async (req: Au
     try {
         const { title, message, targetRole, link } = req.body;
 
-        // Get target users
         const users = await prisma.user.findMany({
             where: targetRole ? { role: targetRole } : {},
             select: { id: true },
         });
 
-        // Create notifications for all target users
         const notifications = await prisma.notification.createMany({
             data: users.map(user => ({
                 userId: user.id,
