@@ -15,6 +15,10 @@ router.get('/dashboard', authenticateToken, requireRole('ADMIN', 'ORGANIZER'), a
             pendingEvents,
             totalResources,
             pendingBookings,
+            totalBookings,
+            totalRegistrations,
+            recentEvents,
+            recentBookings
         ] = await Promise.all([
             prisma.user.count(),
             prisma.club.count(),
@@ -22,7 +26,40 @@ router.get('/dashboard', authenticateToken, requireRole('ADMIN', 'ORGANIZER'), a
             prisma.event.count({ where: { status: 'PENDING' } }),
             prisma.resource.count(),
             prisma.resourceBooking.count({ where: { status: 'PENDING' } }),
+            prisma.resourceBooking.count(),
+            prisma.eventRegistration.count(),
+            prisma.event.findMany({
+                take: 5,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, title: true, status: true, createdAt: true }
+            }),
+            prisma.resourceBooking.findMany({
+                take: 5,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, title: true, status: true, createdAt: true, resource: { select: { name: true } } }
+            })
         ]);
+
+        const participationRate = totalUsers > 0 ? Math.round((totalRegistrations / totalUsers) * 100) : 0;
+
+        const recentActivity = [
+            ...recentEvents.map(e => ({
+                id: e.id,
+                title: e.title,
+                time: e.createdAt,
+                status: e.status,
+                type: 'event'
+            })),
+            ...recentBookings.map(b => ({
+                id: b.id,
+                title: `${b.title} (${b.resource.name})`,
+                time: b.createdAt,
+                status: b.status,
+                type: 'booking'
+            }))
+        ]
+            .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+            .slice(0, 5);
 
         res.json({
             totalUsers,
@@ -31,8 +68,12 @@ router.get('/dashboard', authenticateToken, requireRole('ADMIN', 'ORGANIZER'), a
             pendingEvents,
             totalResources,
             pendingBookings,
+            totalBookings,
+            participationRate,
+            recentActivity
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Failed to fetch dashboard stats' });
     }
 });

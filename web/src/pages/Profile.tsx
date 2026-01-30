@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Building, Calendar, Users, Edit2, Camera, Trophy, Star } from 'lucide-react';
+import { Mail, Building, Calendar, Edit2, Camera, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Event } from '../types';
@@ -9,30 +9,34 @@ import { Event } from '../types';
 export default function Profile() {
     const { user } = useAuth();
     const [recentEvents, setRecentEvents] = useState<Event[]>([]);
+    const [organizedEvents, setOrganizedEvents] = useState<Event[]>([]);
 
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const events = await api.getMyEvents();
-                setRecentEvents(events);
+                const [registered, organized] = await Promise.all([
+                    api.getMyEvents(),
+                    user?.role !== 'PARTICIPANT' ? api.getEvents({ organizerId: user?.id }) : Promise.resolve([])
+                ]);
+                setRecentEvents(registered);
+                setOrganizedEvents(organized);
             } catch (error) {
                 console.error(error);
             }
         };
         fetchEvents();
-    }, []);
+    }, [user]);
 
-    const memberships = [
-        { name: 'Coding Club', role: 'Member', since: 'Aug 2024' },
-        { name: 'AI Society', role: 'Core Team', since: 'Jan 2025' },
-        { name: 'Tech Committee', role: 'Lead', since: 'Jun 2025' },
-    ];
+    const allActivity = [
+        ...recentEvents.map(e => ({ type: 'Registered for', event: e, date: e.date })),
+        ...organizedEvents.map(e => ({ type: 'Created', event: e, date: e.date }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const stats = [
         { label: 'Events Attended', value: recentEvents.length, icon: <Calendar size={18} /> },
-        { label: 'Events Organized', value: 3, icon: <Star size={18} /> },
-        { label: 'Club Memberships', value: 3, icon: <Users size={18} /> },
-        { label: 'Achievements', value: 5, icon: <Trophy size={18} /> },
+        { label: 'Events Organized', value: organizedEvents.length, icon: <Star size={18} /> },
+        // { label: 'Club Memberships', value: memberships.length, icon: <Users size={18} /> }, // Hiding for now to avoid confusion
+        // { label: 'Achievements', value: 0, icon: <Trophy size={18} /> },
     ];
 
     if (!user) return null;
@@ -44,6 +48,7 @@ export default function Profile() {
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card rounded-2xl overflow-hidden"
             >
+                {/* ... (Header section remains same) ... */}
                 <div className="h-32 bg-gradient-to-r from-primary-500 via-indigo-500 to-purple-500 relative">
                     <div className="absolute inset-0 bg-black/10"></div>
                 </div>
@@ -91,7 +96,7 @@ export default function Profile() {
                 </div>
             </motion.div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className={`grid grid-cols-2 gap-4`}>
                 {stats.map((stat, i) => (
                     <motion.div
                         key={stat.label}
@@ -109,7 +114,8 @@ export default function Profile() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8">
+                {/* 
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -121,28 +127,11 @@ export default function Profile() {
                     </h2>
                     <div className="space-y-4">
                         {memberships.map((club) => (
-                            <div key={club.name} className="flex items-center justify-between p-4 rounded-xl bg-surface-50 hover:bg-surface-100 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
-                                        {club.name[0]}
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-surface-900">{club.name}</p>
-                                        <p className="text-sm text-surface-500">{club.role} | Since {club.since}</p>
-                                    </div>
-                                </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${club.role === 'Lead'
-                                    ? 'bg-yellow-100 text-yellow-700'
-                                    : club.role === 'Core Team'
-                                        ? 'bg-purple-100 text-purple-700'
-                                        : 'bg-surface-200 text-surface-600'
-                                    }`}>
-                                    {club.role}
-                                </span>
-                            </div>
+                             // ... club logic ... 
                         ))}
                     </div>
                 </motion.div>
+                */}
 
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -155,13 +144,13 @@ export default function Profile() {
                         Recent Activity
                     </h2>
                     <div className="space-y-1">
-                        {recentEvents.length > 0 ? recentEvents.map((event) => (
-                            <div key={event.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-50 transition-colors">
-                                <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                        {allActivity.length > 0 ? allActivity.map((activity, i) => (
+                            <div key={`${activity.event.id}-${i}`} className="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-50 transition-colors">
+                                <div className={`w-2 h-2 rounded-full ${activity.type === 'Created' ? 'bg-purple-500' : 'bg-primary-500'}`}></div>
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-surface-900">Registered for {event.title}</p>
+                                    <p className="text-sm font-medium text-surface-900">{activity.type} {activity.event.title}</p>
                                     <p className="text-xs text-surface-500">
-                                        {new Date(event.date).toLocaleDateString()}
+                                        {new Date(activity.date).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>

@@ -18,8 +18,17 @@ export const api = {
         return response.json();
     },
 
-    getEvents: async (status?: string): Promise<Event[]> => {
-        const query = status ? `?status=${status}` : '';
+    getEvents: async (params?: string | { status?: string; organizerId?: string }): Promise<Event[]> => {
+        let query = '';
+        if (typeof params === 'string') {
+            query = params ? `?status=${params}` : '';
+        } else if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.status) queryParams.append('status', params.status);
+            if (params.organizerId) queryParams.append('organizerId', params.organizerId);
+            query = `?${queryParams.toString()}`;
+        }
+
         const response = await fetch(`${API_BASE_URL}/events${query}`, {
             headers: getHeaders(),
         });
@@ -220,6 +229,30 @@ export const api = {
     getClubActivity: async () => {
         const response = await fetch(`${API_BASE_URL}/analytics/clubs/activity`, { headers: getHeaders() });
         if (!response.ok) throw new Error('Failed to fetch club activity');
+        return response.json();
+    },
+
+    getClubs: async () => {
+        const response = await fetch(`${API_BASE_URL}/clubs`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to fetch clubs');
+        return response.json();
+    },
+
+    joinClub: async (id: string) => {
+        const response = await fetch(`${API_BASE_URL}/clubs/${id}/join`, {
+            method: 'POST',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to join club');
+        return response.json();
+    },
+
+    leaveClub: async (id: string) => {
+        const response = await fetch(`${API_BASE_URL}/clubs/${id}/leave`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to leave club');
         return response.json();
     },
 

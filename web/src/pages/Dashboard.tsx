@@ -3,7 +3,8 @@ import { UserRole } from '../types';
 import { motion } from 'framer-motion';
 import { Calendar, Users, Building2, TrendingUp, Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../services/api';
 
 interface StatCardProps {
     title: string;
@@ -104,10 +105,26 @@ function ActivityItem({ title, time, status }: ActivityItemProps) {
 export default function Dashboard() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const [stats, setStats] = useState({
+        totalEvents: 0,
+        totalClubs: 0,
+        totalBookings: 0,
+        participationRate: 0,
+        recentActivity: [] as any[]
+    });
 
     useEffect(() => {
-        if (user?.role === UserRole.PARTICIPANT) {
-            navigate('/events');
+        const fetchStats = async () => {
+            try {
+                const data = await api.getDashboardStats();
+                setStats(data);
+            } catch (error) {
+                console.error('Failed to fetch dashboard stats', error);
+            }
+        };
+
+        if (user) {
+            fetchStats();
         }
     }, [user, navigate]);
 
@@ -143,32 +160,32 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Total Events"
-                    value={24}
-                    change="+12% from last month"
-                    changeType="positive"
+                    value={stats.totalEvents}
+                    change="All time"
+                    changeType="neutral"
                     icon={<Calendar className="text-primary-600" size={24} />}
                     color="bg-primary-50"
                 />
                 <StatCard
                     title="Active Clubs"
-                    value={18}
-                    change="+2 new clubs"
-                    changeType="positive"
+                    value={stats.totalClubs}
+                    change="Registered"
+                    changeType="neutral"
                     icon={<Users className="text-green-600" size={24} />}
                     color="bg-green-50"
                 />
                 <StatCard
                     title="Resources Booked"
-                    value={156}
-                    change="This week"
+                    value={stats.totalBookings}
+                    change="All time"
                     changeType="neutral"
                     icon={<Building2 className="text-orange-600" size={24} />}
                     color="bg-orange-50"
                 />
                 <StatCard
                     title="Participation Rate"
-                    value="89%"
-                    change="+5% improvement"
+                    value={`${stats.participationRate}%`}
+                    change="Avg. registration"
                     changeType="positive"
                     icon={<TrendingUp className="text-purple-600" size={24} />}
                     color="bg-purple-50"
@@ -215,26 +232,18 @@ export default function Dashboard() {
                 <div className="space-y-4">
                     <h2 className="text-lg font-display font-semibold text-surface-900">Recent Activity</h2>
                     <div className="glass-card rounded-2xl p-5">
-                        <ActivityItem
-                            title="HackOverflow 2026 approved"
-                            time="2 hours ago"
-                            status="approved"
-                        />
-                        <ActivityItem
-                            title="AI Workshop pending review"
-                            time="5 hours ago"
-                            status="pending"
-                        />
-                        <ActivityItem
-                            title="Auditorium A booked"
-                            time="1 day ago"
-                            status="approved"
-                        />
-                        <ActivityItem
-                            title="Music Fest needs revision"
-                            time="2 days ago"
-                            status="rejected"
-                        />
+                        {stats.recentActivity.length > 0 ? (
+                            stats.recentActivity.map((activity, i) => (
+                                <ActivityItem
+                                    key={i}
+                                    title={activity.title}
+                                    time={new Date(activity.time).toLocaleDateString()}
+                                    status={(activity.status.toLowerCase() as any)}
+                                />
+                            ))
+                        ) : (
+                            <p className="text-center text-surface-500 py-4">No recent activity</p>
+                        )}
                     </div>
                 </div>
             </div>

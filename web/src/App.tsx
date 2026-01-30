@@ -6,14 +6,13 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
 import CreateEvent from './pages/CreateEvent';
-
-
 import Resources from './pages/Resources';
 import Profile from './pages/Profile';
 import Clubs from './pages/Clubs';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Chat from './pages/Chat';
+import HomeRedirect from './components/HomeRedirect';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const { isAuthenticated } = useAuth();
@@ -44,7 +43,7 @@ function AppRoutes() {
 
             {/* Protected routes */}
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                <Route index element={<Dashboard />} />
+                <Route index element={<HomeRedirect />} />
                 <Route path="events" element={<Events />} />
                 <Route path="events/new" element={<CreateEvent />} />
                 <Route path="resources" element={<Resources />} />

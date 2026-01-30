@@ -73,15 +73,8 @@ export default function Login() {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: role.email, password: 'password123' }),
-            });
+            const data = await login(role.email, 'password123');
 
-            if (!response.ok) throw new Error('Invalid credentials');
-
-            const data = await response.json();
             setPendingAuth({ user: data.user, token: data.token });
 
             setLoading(false);

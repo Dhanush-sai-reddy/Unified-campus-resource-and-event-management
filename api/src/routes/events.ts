@@ -54,6 +54,10 @@ router.get('/', async (req, res) => {
             whereClause.clubId = clubId as string;
         }
 
+        if (req.query.organizerId) {
+            whereClause.organizerId = req.query.organizerId as string;
+        }
+
         const events = await prisma.event.findMany({
             where: whereClause,
             include: {

@@ -6,14 +6,29 @@ const router = Router();
 const prisma = new PrismaClient();
 
 // Get all clubs
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const clubs = await prisma.club.findMany({
             include: {
-                _count: { select: { members: true, events: true } }
+                _count: { select: { members: true, events: true } },
+                members: {
+                    where: { userId: req.userId },
+                    select: { userId: true }
+                }
             },
         });
-        res.json(clubs);
+
+        const formattedClubs = clubs.map(club => ({
+            id: club.id,
+            name: club.name,
+            description: club.description,
+            category: club.category,
+            memberCount: club._count.members,
+            eventCount: club._count.events,
+            isJoined: club.members.length > 0
+        }));
+
+        res.json(formattedClubs);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch clubs' });
     }

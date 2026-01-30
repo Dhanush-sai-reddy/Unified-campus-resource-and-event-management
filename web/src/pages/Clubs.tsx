@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Search, ChevronRight, Calendar } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Users, Search, Calendar } from 'lucide-react';
+import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface Club {
     id: string;
@@ -13,63 +14,6 @@ interface Club {
     isJoined: boolean;
 }
 
-const MOCK_CLUBS: Club[] = [
-    {
-        id: 'c1',
-        name: 'Coding Club',
-        description: 'Learn to code, build projects, and participate in hackathons together.',
-        memberCount: 156,
-        eventCount: 24,
-        category: 'Technical',
-        isJoined: true,
-    },
-    {
-        id: 'c2',
-        name: 'AI Society',
-        description: 'Explore artificial intelligence, machine learning, and data science.',
-        memberCount: 89,
-        eventCount: 12,
-        category: 'Technical',
-        isJoined: true,
-    },
-    {
-        id: 'c3',
-        name: 'Cultural Club',
-        description: 'Celebrate diversity through music, dance, art, and cultural events.',
-        memberCount: 234,
-        eventCount: 36,
-        category: 'Cultural',
-        isJoined: false,
-    },
-    {
-        id: 'c4',
-        name: 'Sports Committee',
-        description: 'Organize sports events, tournaments, and fitness activities.',
-        memberCount: 312,
-        eventCount: 48,
-        category: 'Sports',
-        isJoined: false,
-    },
-    {
-        id: 'c5',
-        name: 'Entrepreneurship Cell',
-        description: 'Foster innovation and startup culture among students.',
-        memberCount: 67,
-        eventCount: 8,
-        category: 'Business',
-        isJoined: false,
-    },
-    {
-        id: 'c6',
-        name: 'Photography Club',
-        description: 'Capture moments, learn photography skills, and showcase your work.',
-        memberCount: 78,
-        eventCount: 15,
-        category: 'Arts',
-        isJoined: false,
-    },
-];
-
 const categoryColors: Record<string, string> = {
     Technical: 'bg-blue-50 text-blue-700',
     Cultural: 'bg-purple-50 text-purple-700',
@@ -78,8 +22,18 @@ const categoryColors: Record<string, string> = {
     Arts: 'bg-pink-50 text-pink-700',
 };
 
-function ClubCard({ club }: { club: Club }) {
-    const [joined, setJoined] = useState(club.isJoined);
+function ClubCard({ club, onToggleJoin }: { club: Club; onToggleJoin: (club: Club) => void }) {
+    const [loading, setLoading] = useState(false);
+
+    const handleJoin = async () => {
+        if (loading) return;
+        setLoading(true);
+        try {
+            await onToggleJoin(club);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <motion.div
@@ -92,7 +46,7 @@ function ClubCard({ club }: { club: Club }) {
             <div className="h-24 bg-gradient-to-br from-primary-500 via-indigo-500 to-purple-500 relative">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="absolute top-4 right-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${categoryColors[club.category]}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${categoryColors[club.category] || 'bg-gray-100'}`}>
                         {club.category}
                     </span>
                 </div>
@@ -128,20 +82,15 @@ function ClubCard({ club }: { club: Club }) {
                 {/* Actions */}
                 <div className="flex gap-3 mt-5">
                     <button
-                        onClick={() => setJoined(!joined)}
-                        className={`flex-1 py-2.5 rounded-xl font-medium transition-all ${joined
+                        onClick={handleJoin}
+                        disabled={loading}
+                        className={`w-full py-2.5 rounded-xl font-medium transition-all ${club.isJoined
                             ? 'bg-green-50 text-green-700 hover:bg-green-100'
                             : 'bg-primary-600 text-white hover:bg-primary-700 shadow-lg shadow-primary-500/25'
-                            }`}
+                            } ${loading ? 'opacity-70 cursor-wait' : ''}`}
                     >
-                        {joined ? 'Joined' : 'Join Club'}
+                        {loading ? 'Processing...' : club.isJoined ? 'Joined' : 'Join Club'}
                     </button>
-                    <Link
-                        to={`/clubs/${club.id}`}
-                        className="px-4 py-2.5 rounded-xl bg-surface-100 text-surface-700 font-medium hover:bg-surface-200 transition-colors"
-                    >
-                        <ChevronRight size={18} />
-                    </Link>
                 </div>
             </div>
         </motion.div>
@@ -149,25 +98,48 @@ function ClubCard({ club }: { club: Club }) {
 }
 
 export default function Clubs() {
+    const { user } = useAuth();
     const [clubs, setClubs] = useState<Club[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
 
-    useEffect(() => {
-        // Simulate loading
-        setTimeout(() => {
-            setClubs(MOCK_CLUBS);
+    const fetchClubs = async () => {
+        try {
+            setLoading(true);
+            const data = await api.getClubs();
+            setClubs(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
             setLoading(false);
-        }, 500);
+        }
+    };
+
+    useEffect(() => {
+        fetchClubs();
     }, []);
 
-    const categories = ['all', ...new Set(MOCK_CLUBS.map(c => c.category))];
+    const handleToggleJoin = async (club: Club) => {
+        try {
+            if (club.isJoined) {
+                await api.leaveClub(club.id);
+            } else {
+                await api.joinClub(club.id);
+            }
+            // Refresh list to update counts and status
+            fetchClubs();
+        } catch (error) {
+            console.error('Failed to toggle membership', error);
+        }
+    };
+
+    const categories = ['all', ...new Set(clubs.map(c => c.category))];
 
     const filteredClubs = clubs.filter(club => {
         const matchesCategory = categoryFilter === 'all' || club.category === categoryFilter;
         const matchesSearch = club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            club.description.toLowerCase().includes(searchQuery.toLowerCase());
+            (club.description || '').toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCategory && matchesSearch;
     });
 
@@ -184,6 +156,11 @@ export default function Clubs() {
                     <h1 className="text-2xl font-display font-bold text-surface-900">Clubs & Communities</h1>
                     <p className="text-surface-500 mt-1">Join clubs and connect with like-minded peers</p>
                 </div>
+                {user?.role === 'ADMIN' && (
+                    <button className="px-5 py-2.5 bg-surface-900 text-white rounded-xl font-medium hover:bg-black transition-colors">
+                        Create Club
+                    </button>
+                )}
             </div>
 
             {/* Filters */}
@@ -234,7 +211,7 @@ export default function Clubs() {
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
                     {filteredClubs.map((club) => (
-                        <ClubCard key={club.id} club={club} />
+                        <ClubCard key={club.id} club={club} onToggleJoin={handleToggleJoin} />
                     ))}
                 </motion.div>
             )}

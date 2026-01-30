@@ -50,6 +50,9 @@ verify_system.ps1
 fix_db.sql
 truncate_events.sql
 populate_resources.sql
+init_node_db.sql
+seed_data.sql
+start_local.bat
 
 # Go
 bin/

@@ -55,7 +55,7 @@ export default function Analytics() {
 
     useEffect(() => {
         if (user && user.role === 'PARTICIPANT') {
-            navigate('/dashboard');
+            navigate('/events');
             return;
         }
 
