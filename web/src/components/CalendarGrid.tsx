@@ -44,6 +44,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
     const [draggingEvent, setDraggingEvent] = useState<string | null>(null);
     const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom' } | null>(null);
     const [dragStartSnapshot, setDragStartSnapshot] = useState<CalendarEvent | null>(null);
+    const [dragOverride, setDragOverride] = useState<CalendarEvent | null>(null);
 
     const [isSelecting, setIsSelecting] = useState(false);
     const [selectionStart, setSelectionStart] = useState<{ day: number, hour: number } | null>(null);
@@ -248,7 +249,28 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         const coords = getGridCoordinates(e);
         if (!coords) return;
 
-        if (isSelecting && selectionStart) {
+        if (resizingEvent) {
+            const original = events.find(ev => ev.id === resizingEvent.id);
+            if (original) {
+                const override = dragOverride || { ...original };
+                if (resizingEvent.edge === 'top') {
+                    const newStart = Math.min(coords.hour, original.endHour - 1);
+                    setDragOverride({ ...override, startHour: newStart });
+                } else {
+                    const newEnd = Math.max(coords.hour + 1, original.startHour + 1);
+                    setDragOverride({ ...override, endHour: newEnd });
+                }
+            }
+        } else if (draggingEvent) {
+            const original = events.find(ev => ev.id === draggingEvent);
+            if (original) {
+                const duration = original.endHour - original.startHour;
+                const newStart = Math.max(8, Math.min(22 - duration, coords.hour));
+                // Also handle day change if needed, but for now just hour
+                const newDay = coords.day;
+                setDragOverride({ ...original, day: newDay, startHour: newStart, endHour: newStart + duration });
+            }
+        } else if (isSelecting && selectionStart) {
             let targetDay = coords.day;
             // In resource view, lock selection to the starting resource column
             if (viewMode === 'resources') {
@@ -345,6 +367,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
         setDraggingEvent(null);
         setResizingEvent(null);
         setDragStartSnapshot(null);
+        setDragOverride(null);
         setIsSelecting(false);
     };
 
@@ -432,7 +455,9 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                 {renderSelectionOverlay()}
 
 
-                {events.map((event) => {
+                {events.map((originalEvent) => {
+                    const event = (dragOverride && dragOverride.id === originalEvent.id) ? dragOverride : originalEvent;
+
                     const top = (event.startHour - 8) * 60;
                     const height = (event.endHour - event.startHour) * 60;
                     const colCount = viewMode === 'resources' ? resources.length : 7;
