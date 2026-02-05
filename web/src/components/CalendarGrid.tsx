@@ -421,6 +421,7 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseUp} // Auto-release/cancel if mouse leaves the calendar area
         >
 
             <div className="flex border-b border-surface-200 bg-surface-50 grid-header h-[50px]">

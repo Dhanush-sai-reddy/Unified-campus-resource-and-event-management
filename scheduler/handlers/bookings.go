@@ -8,7 +8,14 @@ import (
 	"github.com/google/uuid"
 
 	"campus-scheduler/db"
+	"campus-scheduler/pkg/interval"
 )
+
+var intervalManager *interval.Manager
+
+func SetIntervalManager(m *interval.Manager) {
+	intervalManager = m
+}
 
 type Booking struct {
 	ID         string    `json:"id"`
@@ -99,32 +106,18 @@ func CreateBooking(c *fiber.Ctx) error {
 	startTime, _ := time.Parse(time.RFC3339, input.StartTime)
 	endTime, _ := time.Parse(time.RFC3339, input.EndTime)
 
-	 
+	// Restore pool and err declaration
 	pool := db.GetPool()
-	var conflictCount int
-	err := pool.QueryRow(context.Background(), `
-		SELECT COUNT(*) FROM bookings 
-		WHERE resource_id = $1 
-		AND status != 'CANCELLED'
-		AND (
-			(start_time <= $2 AND end_time > $2) OR
-			(start_time < $3 AND end_time >= $3) OR
-			(start_time >= $2 AND end_time <= $3)
-		)
-	`, input.ResourceID, startTime, endTime).Scan(&conflictCount)
+	var err error
 
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to check conflicts"})
-	}
-
-	if conflictCount > 0 {
+	// Interval Tree Conflict Check
+	if intervalManager != nil && intervalManager.HasConflict(input.ResourceID, startTime, endTime) {
 		return c.Status(409).JSON(fiber.Map{
-			"error":     "Booking conflict detected",
-			"conflicts": conflictCount,
+			"error":     "Booking conflict detected (Interval Tree)",
+			"conflicts": 1, // Simple boolean check for performance
 		})
 	}
 
-	 
 	id := uuid.New().String()
 	_, err = pool.Exec(context.Background(), `
 		INSERT INTO bookings (id, resource_id, user_id, user_name, event_name, start_time, end_time, status)
@@ -133,6 +126,11 @@ func CreateBooking(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create booking"})
+	}
+
+	// Add to Interval Tree
+	if intervalManager != nil {
+		intervalManager.AddBooking(input.ResourceID, id, "PENDING", startTime, endTime)
 	}
 
 	return c.Status(201).JSON(fiber.Map{
@@ -168,7 +166,15 @@ func CancelBooking(c *fiber.Ctx) error {
 	id := c.Params("id")
 	pool := db.GetPool()
 
-	_, err := pool.Exec(context.Background(), `
+	// Get booking details first to remove from tree
+	var b Booking
+	// We need start/end/resourceID. GetBooking handler query logic reused or direct query:
+	err := pool.QueryRow(context.Background(), `SELECT resource_id, start_time, end_time FROM bookings WHERE id = $1`, id).Scan(&b.ResourceID, &b.StartTime, &b.EndTime)
+	if err == nil && intervalManager != nil {
+		intervalManager.RemoveBooking(b.ResourceID, id, b.StartTime, b.EndTime)
+	}
+
+	_, err = pool.Exec(context.Background(), `
 		UPDATE bookings SET status = 'CANCELLED' WHERE id = $1
 	`, id)
 

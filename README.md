@@ -50,7 +50,7 @@ The system features a high-performance **Go-based Scheduler** for conflict detec
 
 ```mermaid
 graph TD
-    Client[Client (React)] <-->|WebSocket/HTTP| Nginx[Nginx Reverse Proxy]
+    Client["Client (React)"] <-->|WebSocket/HTTP| Nginx[Nginx Reverse Proxy]
     Nginx <-->|/api| NodeService[Node.js API Service]
     Nginx <-->|/scheduler| GoService[Go Scheduler Service]
     
