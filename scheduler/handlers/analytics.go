@@ -65,7 +65,7 @@ func GetResourceUsage(c *fiber.Ctx) error {
 func GetEventTrends(c *fiber.Ctx) error {
 	pool := db.GetPool()
 
-	// Get bookings per day for last 30 days
+	 
 	rows, err := pool.Query(context.Background(), `
 		SELECT DATE(start_time) as date, COUNT(*) as count
 		FROM bookings

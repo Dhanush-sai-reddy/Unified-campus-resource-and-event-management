@@ -102,5 +102,41 @@
       "startTime": "2026-01-31T06:30:00.000Z",
       "endTime": "2026-01-31T07:30:00.000Z"
     }
+  },
+  {
+    "timestamp": "2026-01-30T16:24:06.126Z",
+    "action": "event_created",
+    "data": {
+      "eventId": "58d1d7aa-1edd-4068-bf67-93e36fb54d01",
+      "title": "cotton picking comp",
+      "userId": "f619650e-cc2e-4e6d-b854-604c84e0b321",
+      "resourceId": "bc89aa95-e870-4d09-bd1f-c2d934dfbfcb"
+    }
+  },
+  {
+    "timestamp": "2026-01-30T17:08:23.693Z",
+    "action": "event_approved",
+    "data": {
+      "eventId": "22e3104b-9c55-4a70-bc0f-aeb54f73e808",
+      "userId": "f619650e-cc2e-4e6d-b854-604c84e0b321"
+    }
+  },
+  {
+    "timestamp": "2026-01-30T17:20:42.076Z",
+    "action": "event_deleted",
+    "data": {
+      "eventId": "58d1d7aa-1edd-4068-bf67-93e36fb54d01",
+      "userId": "f619650e-cc2e-4e6d-b854-604c84e0b321"
+    }
+  },
+  {
+    "timestamp": "2026-01-30T17:21:08.541Z",
+    "action": "resource_created",
+    "data": {
+      "resourceId": "38a7e72e-e0c3-4664-b38d-407c5a234e01",
+      "name": "cotton field",
+      "type": "OTHER",
+      "userId": "f619650e-cc2e-4e6d-b854-604c84e0b321"
+    }
   }
 ]

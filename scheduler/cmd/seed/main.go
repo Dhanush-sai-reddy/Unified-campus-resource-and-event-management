@@ -22,7 +22,7 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	// Seed Resources
+	 
 	resources := []struct {
 		Name     string
 		Type     string

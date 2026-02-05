@@ -5,7 +5,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get chat history for a room
+ 
 router.get('/:roomId', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { roomId } = req.params;
@@ -14,7 +14,7 @@ router.get('/:roomId', authenticateToken, async (req: AuthRequest, res: Response
         const messages = await prisma.message.findMany({
             where: { roomId },
             take: limit ? parseInt(limit as string) : 50,
-            orderBy: { createdAt: 'asc' }, // Oldest first for chat history
+            orderBy: { createdAt: 'asc' },  
             include: {
                 sender: {
                     select: { id: true, name: true, avatar: true }

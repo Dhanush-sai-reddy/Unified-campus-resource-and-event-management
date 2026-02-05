@@ -24,7 +24,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     }
 });
 
-// Get user by ID
+ 
 router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const user = await prisma.user.findUnique({
@@ -52,7 +52,7 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
     }
 });
 
-// Update profile
+ 
 router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { name, department, avatar } = req.body;

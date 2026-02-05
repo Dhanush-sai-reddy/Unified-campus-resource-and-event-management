@@ -7,7 +7,7 @@ import { createNotification } from './notifications';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get my registered events
+
 router.get('/my/registered', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const registrations = await prisma.eventRegistration.findMany({
@@ -31,12 +31,12 @@ router.get('/my/registered', authenticateToken, async (req: AuthRequest, res: Re
     }
 });
 
-// Get all events
+
 router.get('/', async (req, res) => {
     try {
         const { status, clubId } = req.query;
 
-        // Default to APPROVED if no status provided
+
         let whereClause: any = {
             status: 'APPROVED',
         };
@@ -73,7 +73,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get event by ID
+
 router.get('/:id', async (req, res) => {
     try {
         const event = await prisma.event.findUnique({
@@ -100,7 +100,7 @@ router.get('/:id', async (req, res) => {
 
 import { hasConflict } from '../services/bookingService';
 
-// Create event
+
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         if (req.userRole === 'PARTICIPANT') {
@@ -112,8 +112,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         const start = new Date(date);
         const end = endDate ? new Date(endDate) : new Date(start.getTime() + 60 * 60 * 1000);
 
-        // If resourceId is provided, check for conflicts
-        // ... (conflict check code remains same) ...
+
+
         let bookingData = undefined;
         if (resourceId) {
             const conflict = await hasConflict(resourceId, start, end);
@@ -157,10 +157,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
             },
         });
 
-        // Audit log
+
         await auditLog('event_created', { eventId: event.id, title, userId: req.userId, resourceId });
 
-        // Kafka
+
         const { publishEvent } = require('../services/producer');
         publishEvent(event).catch(console.error);
 
@@ -171,16 +171,16 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     }
 });
 
-// Approve event
+
 router.post('/:id/approve', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const event = await prisma.event.update({
             where: { id: req.params.id },
             data: { status: 'APPROVED' },
-            include: { organizer: true } // Include organizer for notification if needed
+            include: { organizer: true }
         });
 
-        // Update associated booking if exists
+
         await prisma.resourceBooking.updateMany({
             where: { eventId: event.id },
             data: { status: 'APPROVED' }
@@ -188,7 +188,7 @@ router.post('/:id/approve', authenticateToken, requireRole('ADMIN'), async (req:
 
         await auditLog('event_approved', { eventId: event.id, userId: req.userId });
 
-        // Notify organizer
+
         await createNotification(
             event.organizerId,
             'EVENT_APPROVED',
@@ -203,7 +203,7 @@ router.post('/:id/approve', authenticateToken, requireRole('ADMIN'), async (req:
     }
 });
 
-// Reject event
+
 router.post('/:id/reject', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { reason } = req.body;
@@ -212,7 +212,7 @@ router.post('/:id/reject', authenticateToken, requireRole('ADMIN'), async (req: 
             data: { status: 'REJECTED' },
         });
 
-        // Update associated booking if exists
+
         await prisma.resourceBooking.updateMany({
             where: { eventId: event.id },
             data: { status: 'REJECTED' }
@@ -234,32 +234,82 @@ router.post('/:id/reject', authenticateToken, requireRole('ADMIN'), async (req: 
     }
 });
 
-// Update event
+
 router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { title, description, date, endDate, location, budget } = req.body;
 
-        const event = await prisma.event.update({
+        const currentEvent = await prisma.event.findUnique({
+            where: { id: req.params.id },
+            include: { resourceBookings: true }
+        });
+
+        if (!currentEvent) return res.status(404).json({ error: 'Event not found' });
+        if (currentEvent.organizerId !== req.userId && req.userRole !== 'ADMIN') {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+
+        const newStart = date ? new Date(date) : currentEvent.date;
+        const newEnd = endDate ? new Date(endDate) : (currentEvent.endDate || new Date(newStart.getTime() + 3600000));
+
+        const timeChanged = newStart.getTime() !== currentEvent.date.getTime() ||
+            (currentEvent.endDate && newEnd.getTime() !== currentEvent.endDate.getTime());
+
+        if (timeChanged && currentEvent.resourceBookings.length > 0) {
+            for (const booking of currentEvent.resourceBookings) {
+                const duration = booking.endTime.getTime() - booking.startTime.getTime();
+                const diff = newStart.getTime() - currentEvent.date.getTime();
+                const bStart = new Date(booking.startTime.getTime() + diff);
+                const bEnd = new Date(booking.endTime.getTime() + diff);
+
+                const conflict = await hasConflict(booking.resourceId, bStart, bEnd, booking.id);
+                if (conflict) {
+                    return res.status(409).json({
+                        error: `Cannot reschedule: Resource conflict for booking '${booking.title}' at new time.`
+                    });
+                }
+            }
+        }
+
+        const queries: any[] = [];
+
+        queries.push(prisma.event.update({
             where: { id: req.params.id },
             data: {
                 title,
                 description,
-                date: date ? new Date(date) : undefined,
-                endDate: endDate ? new Date(endDate) : undefined,
+                date: newStart,
+                endDate: newEnd,
                 location,
                 budget: budget ? parseFloat(budget) : undefined,
             },
-        });
+        }));
+
+        if (timeChanged && currentEvent.resourceBookings.length > 0) {
+            const diff = newStart.getTime() - currentEvent.date.getTime();
+            currentEvent.resourceBookings.forEach(b => {
+                const bStart = new Date(b.startTime.getTime() + diff);
+                const bEnd = new Date(b.endTime.getTime() + diff);
+                queries.push(prisma.resourceBooking.update({
+                    where: { id: b.id },
+                    data: { startTime: bStart, endTime: bEnd }
+                }));
+            });
+        }
+
+        const results = await prisma.$transaction(queries);
+        const event = results[0];
 
         await auditLog('event_updated', { eventId: event.id, changes: req.body, userId: req.userId });
 
         res.json(event);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Failed to update event' });
     }
 });
 
-// Delete event
+
 router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const event = await prisma.event.findUnique({ where: { id: req.params.id } });
@@ -268,6 +318,9 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
         if (event.organizerId !== req.userId && req.userRole !== 'ADMIN') {
             return res.status(403).json({ error: 'Not authorized' });
         }
+
+
+
 
         await prisma.event.delete({ where: { id: req.params.id } });
         await auditLog('event_deleted', { eventId: req.params.id, userId: req.userId });
@@ -278,7 +331,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
     }
 });
 
-// Submit event for approval
+
 router.post('/:id/submit', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const event = await prisma.event.update({
@@ -294,7 +347,7 @@ router.post('/:id/submit', authenticateToken, async (req: AuthRequest, res: Resp
     }
 });
 
-// Approve event (admin only)
+
 router.post('/:id/approve', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const event = await prisma.event.update({
@@ -305,7 +358,7 @@ router.post('/:id/approve', authenticateToken, requireRole('ADMIN'), async (req:
 
         await auditLog('event_approved', { eventId: event.id, approvedBy: req.userId });
 
-        // Send notification to organizer
+
         await createNotification(
             event.organizerId,
             'EVENT_APPROVED',
@@ -320,7 +373,7 @@ router.post('/:id/approve', authenticateToken, requireRole('ADMIN'), async (req:
     }
 });
 
-// Reject event (admin only)
+
 router.post('/:id/reject', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { reason } = req.body;
@@ -333,7 +386,7 @@ router.post('/:id/reject', authenticateToken, requireRole('ADMIN'), async (req: 
 
         await auditLog('event_rejected', { eventId: event.id, rejectedBy: req.userId, reason });
 
-        // Send notification to organizer
+
         await createNotification(
             event.organizerId,
             'EVENT_REJECTED',
@@ -348,7 +401,7 @@ router.post('/:id/reject', authenticateToken, requireRole('ADMIN'), async (req: 
     }
 });
 
-// Register for event
+
 router.post('/:id/register', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const registration = await prisma.eventRegistration.create({
@@ -367,7 +420,7 @@ router.post('/:id/register', authenticateToken, async (req: AuthRequest, res: Re
     }
 });
 
-// Unregister from event
+
 router.delete('/:id/register', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         await prisma.eventRegistration.delete({

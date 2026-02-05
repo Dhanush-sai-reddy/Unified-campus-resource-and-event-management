@@ -74,9 +74,9 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             return date;
         });
     };
-    const weekDates = getWeekDates(); // Use memo if needed, but simple function here is fine for now
+    const weekDates = getWeekDates();  
 
-    // Derived state for events to ensure instant updates from props
+     
     const events = useMemo(() => {
         const mapped: CalendarEvent[] = [];
         const startOfWeek = weekDates[0];
@@ -230,12 +230,12 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
                     targetDate = currentDate;
                 }
 
-                // Create a comparison date (midnight)
+                 
                 const checkDate = new Date(targetDate);
                 checkDate.setHours(0, 0, 0, 0);
 
                 if (checkDate < today) {
-                    return; // Prevent selecting past days
+                    return;  
                 }
 
                 setIsSelecting(true);
@@ -266,13 +266,13 @@ export default function CalendarGrid({ viewMode, currentDate, events: dbEvents, 
             if (original) {
                 const duration = original.endHour - original.startHour;
                 const newStart = Math.max(8, Math.min(22 - duration, coords.hour));
-                // Also handle day change if needed, but for now just hour
+                 
                 const newDay = coords.day;
                 setDragOverride({ ...original, day: newDay, startHour: newStart, endHour: newStart + duration });
             }
         } else if (isSelecting && selectionStart) {
             let targetDay = coords.day;
-            // In resource view, lock selection to the starting resource column
+             
             if (viewMode === 'resources') {
                 targetDay = selectionStart.day;
             }

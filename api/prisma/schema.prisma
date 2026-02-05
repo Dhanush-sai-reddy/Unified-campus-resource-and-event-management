@@ -164,7 +164,7 @@ model ResourceBooking {
 
   resource      Resource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event         Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  event         Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 enum NotificationType {

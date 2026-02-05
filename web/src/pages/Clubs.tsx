@@ -42,7 +42,7 @@ function ClubCard({ club, onToggleJoin }: { club: Club; onToggleJoin: (club: Clu
             whileHover={{ y: -4 }}
             className="glass-card rounded-2xl overflow-hidden group"
         >
-            {/* Club banner */}
+            { }
             <div className="h-24 bg-gradient-to-br from-primary-500 via-indigo-500 to-purple-500 relative">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="absolute top-4 right-4">
@@ -53,7 +53,7 @@ function ClubCard({ club, onToggleJoin }: { club: Club; onToggleJoin: (club: Clu
             </div>
 
             <div className="p-5">
-                {/* Avatar & Name */}
+                { }
                 <div className="flex items-start gap-4 -mt-10 relative z-10">
                     <div className="w-14 h-14 rounded-xl bg-white shadow-lg flex items-center justify-center text-2xl font-bold text-primary-600 border-2 border-white">
                         {club.name[0]}
@@ -67,7 +67,7 @@ function ClubCard({ club, onToggleJoin }: { club: Club; onToggleJoin: (club: Clu
 
                 <p className="text-sm text-surface-500 mt-3 line-clamp-2">{club.description}</p>
 
-                {/* Stats */}
+                { }
                 <div className="flex items-center gap-6 mt-4 text-sm text-surface-600">
                     <div className="flex items-center gap-1">
                         <Users size={14} className="text-surface-400" />
@@ -79,7 +79,7 @@ function ClubCard({ club, onToggleJoin }: { club: Club; onToggleJoin: (club: Clu
                     </div>
                 </div>
 
-                {/* Actions */}
+                { }
                 <div className="flex gap-3 mt-5">
                     <button
                         onClick={handleJoin}
@@ -127,7 +127,7 @@ export default function Clubs() {
             } else {
                 await api.joinClub(club.id);
             }
-            // Refresh list to update counts and status
+             
             fetchClubs();
         } catch (error) {
             console.error('Failed to toggle membership', error);
@@ -150,7 +150,7 @@ export default function Clubs() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
+            { }
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-display font-bold text-surface-900">Clubs & Communities</h1>
@@ -163,7 +163,7 @@ export default function Clubs() {
                 )}
             </div>
 
-            {/* Filters */}
+            { }
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <div className="relative flex-1 w-full sm:max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={18} />
@@ -192,7 +192,7 @@ export default function Clubs() {
                 </div>
             </div>
 
-            {/* Clubs grid */}
+            { }
             {loading ? (
                 <div className="flex justify-center py-20">
                     <div className="w-12 h-12 rounded-full border-4 border-surface-200 border-t-primary-600 animate-spin"></div>

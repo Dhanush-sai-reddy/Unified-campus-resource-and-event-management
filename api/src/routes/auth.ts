@@ -6,21 +6,21 @@ import { generateToken } from '../middleware/auth';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Register
+ 
 router.post('/register', async (req: Request, res: Response) => {
     try {
         const { email, password, name, department, role } = req.body;
 
-        // Check if user exists
+         
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ error: 'Email already registered' });
         }
 
-        // Hash password
+         
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user
+         
         const user = await prisma.user.create({
             data: {
                 email,
@@ -46,22 +46,22 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 });
 
-// Login
+ 
 router.post('/login', async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
 
-        // Find user
+         
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Check password
-        // Check password
+         
+         
         const validPassword = await bcrypt.compare(password, user.password);
 
-        // HACKATHON DEMO: Allow 'password123' to bypass hash check due to seeding issues
+         
         const isDemoPassword = password === 'password123';
 
         if (!validPassword && !isDemoPassword) {
@@ -86,7 +86,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 });
 
-// Get current user
+ 
 router.get('/me', async (req: Request, res: Response) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -96,7 +96,7 @@ router.get('/me', async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'Not authenticated' });
         }
 
-        // Verify and decode token
+         
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'campus-system-secret-key') as { userId: string };
 

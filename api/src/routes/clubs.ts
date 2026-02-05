@@ -5,7 +5,7 @@ import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth'
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get all clubs
+ 
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const clubs = await prisma.club.findMany({
@@ -34,7 +34,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     }
 });
 
-// Get club by ID
+ 
 router.get('/:id', async (req, res) => {
     try {
         const club = await prisma.club.findUnique({
@@ -57,7 +57,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create club (admin only)
+ 
 router.post('/', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { name, description, category, logo } = req.body;
@@ -72,7 +72,7 @@ router.post('/', authenticateToken, requireRole('ADMIN'), async (req: AuthReques
     }
 });
 
-// Join club
+ 
 router.post('/:id/join', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const membership = await prisma.membership.create({
@@ -92,7 +92,7 @@ router.post('/:id/join', authenticateToken, async (req: AuthRequest, res: Respon
     }
 });
 
-// Leave club
+ 
 router.delete('/:id/leave', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         await prisma.membership.delete({

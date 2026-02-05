@@ -14,25 +14,25 @@ import (
 )
 
 func main() {
-	// Load env
+	 
 	godotenv.Load()
 
-	// Connect to database
+	 
 	if err := db.Connect(); err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	defer db.Close()
 
-	// Create Fiber app
+	 
 	app := fiber.New(fiber.Config{
 		AppName: "Campus Scheduler API",
 	})
 
-	// Middleware
+	 
 	app.Use(logger.New())
 	app.Use(cors.New())
 
-	// Health check
+	 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":  "ok",
@@ -40,10 +40,10 @@ func main() {
 		})
 	})
 
-	// API routes
+	 
 	api := app.Group("/api")
 
-	// Resources
+	 
 	resources := api.Group("/resources")
 	resources.Get("/", handlers.GetResources)
 	resources.Get("/:id", handlers.GetResource)
@@ -51,7 +51,7 @@ func main() {
 	resources.Put("/:id", handlers.UpdateResource)
 	resources.Delete("/:id", handlers.DeleteResource)
 
-	// Bookings
+	 
 	bookings := api.Group("/bookings")
 	bookings.Get("/", handlers.GetBookings)
 	bookings.Get("/:id", handlers.GetBooking)
@@ -59,16 +59,16 @@ func main() {
 	bookings.Put("/:id/status", handlers.UpdateBookingStatus)
 	bookings.Delete("/:id", handlers.CancelBooking)
 
-	// Start Consumers in background
-	// Consumers removed for simplification
+	 
+	 
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "3002" // Changed default to 3002 to match Dockerfile
+		port = "3002"  
 	}
 
 	log.Printf("Scheduler running on port %s", port)
 	app.Listen(":" + port)
 }
 
-// Removed startRabbitConsumer and startKafkaConsumer
+ 

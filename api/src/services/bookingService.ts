@@ -8,7 +8,7 @@ export async function hasConflict(resourceId: string, startTime: Date, endTime: 
     const conflicting = await prisma.resourceBooking.findFirst({
         where: {
             resourceId,
-            status: 'APPROVED',
+            status: { in: ['APPROVED', 'PENDING'] },
             id: excludeBookingId ? { not: excludeBookingId } : undefined,
             OR: [
                 { startTime: { lt: endTime }, endTime: { gt: startTime } },

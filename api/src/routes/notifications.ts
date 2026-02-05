@@ -5,7 +5,7 @@ import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth'
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get user's notifications
+ 
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { unreadOnly } = req.query;
@@ -25,7 +25,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     }
 });
 
-// Get unread count
+ 
 router.get('/count', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const count = await prisma.notification.count({
@@ -41,7 +41,7 @@ router.get('/count', authenticateToken, async (req: AuthRequest, res: Response) 
     }
 });
 
-// Mark notification as read
+ 
 router.put('/:id/read', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const notification = await prisma.notification.updateMany({
@@ -58,7 +58,7 @@ router.put('/:id/read', authenticateToken, async (req: AuthRequest, res: Respons
     }
 });
 
-// Mark all as read
+ 
 router.put('/read-all', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         await prisma.notification.updateMany({
@@ -75,7 +75,7 @@ router.put('/read-all', authenticateToken, async (req: AuthRequest, res: Respons
     }
 });
 
-// Delete notification
+ 
 router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         await prisma.notification.deleteMany({
@@ -91,7 +91,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
     }
 });
 
-// Clear all notifications
+ 
 router.delete('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         await prisma.notification.deleteMany({
@@ -104,7 +104,7 @@ router.delete('/', authenticateToken, async (req: AuthRequest, res: Response) =>
     }
 });
 
-// Send announcement (admin only)
+ 
 router.post('/announce', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { title, message, targetRole, link } = req.body;
@@ -132,7 +132,7 @@ router.post('/announce', authenticateToken, requireRole('ADMIN'), async (req: Au
     }
 });
 
-// Helper function to create notification (exported for use in other routes)
+ 
 export async function createNotification(
     userId: string,
     type: 'EVENT_APPROVED' | 'EVENT_REJECTED' | 'EVENT_REMINDER' | 'BOOKING_APPROVED' | 'BOOKING_REJECTED' | 'BOOKING_REMINDER' | 'CLUB_INVITE' | 'ANNOUNCEMENT' | 'SYSTEM',

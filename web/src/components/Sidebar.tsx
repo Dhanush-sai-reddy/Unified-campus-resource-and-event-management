@@ -50,7 +50,7 @@ export default function Sidebar() {
 
     const SidebarContent = () => (
         <>
-            {/* Logo */}
+            { }
             <div className={`p-4 border-b border-surface-100/50 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary-500/30">
@@ -74,7 +74,7 @@ export default function Sidebar() {
                 </button>
             </div>
 
-            {/* Navigation */}
+            { }
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
                 {filteredItems.map((item) => (
                     <NavLink
@@ -94,7 +94,7 @@ export default function Sidebar() {
                 ))}
             </nav>
 
-            {/* User section */}
+            { }
             <div className={`p-3 border-t border-surface-100 ${collapsed ? 'items-center' : ''}`}>
                 {user && !collapsed && (
                     <div className="flex items-center gap-3 px-3 py-2 mb-2">
@@ -122,7 +122,7 @@ export default function Sidebar() {
 
     return (
         <>
-            {/* Mobile menu button */}
+            { }
             <button
                 onClick={() => setMobileOpen(true)}
                 className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-xl bg-white shadow-lg text-surface-600"
@@ -130,7 +130,7 @@ export default function Sidebar() {
                 <Menu size={24} />
             </button>
 
-            {/* Mobile sidebar */}
+            { }
             <AnimatePresence>
                 {mobileOpen && (
                     <>
@@ -153,7 +153,7 @@ export default function Sidebar() {
                 )}
             </AnimatePresence>
 
-            {/* Desktop sidebar */}
+            { }
             <aside
                 className={`hidden md:flex fixed inset-y-0 left-0 bg-white/90 backdrop-blur-xl border-r border-surface-200 z-20 flex-col transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'
                     }`}

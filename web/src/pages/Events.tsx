@@ -370,22 +370,24 @@ export default function Events() {
                                         <MessageCircle size={16} />
                                         Join Event Chat
                                     </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (confirm('Are you sure you want to delete this event?')) {
-                                                try {
-                                                    await api.deleteEvent(selectedEvent.id);
-                                                    setEvents(events.filter(e => e.id !== selectedEvent.id));
-                                                    setSelectedEvent(null);
-                                                } catch (err) {
-                                                    alert('Failed to delete event');
+                                    {(user?.role === UserRole.ADMIN || user?.id === selectedEvent.organizerId) && (
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm('Are you sure you want to delete this event?')) {
+                                                    try {
+                                                        await api.deleteEvent(selectedEvent.id);
+                                                        setEvents(events.filter(e => e.id !== selectedEvent.id));
+                                                        setSelectedEvent(null);
+                                                    } catch (err) {
+                                                        alert('Failed to delete event');
+                                                    }
                                                 }
-                                            }
-                                        }}
-                                        className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
-                                    >
-                                        Delete
-                                    </button>
+                                            }}
+                                            className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                                        >
+                                            Delete
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => setSelectedEvent(null)}
                                         className="px-4 py-2 text-sm font-medium text-surface-700 bg-surface-100 hover:bg-surface-200 rounded-xl transition-colors"

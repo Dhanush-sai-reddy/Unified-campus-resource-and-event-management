@@ -5,7 +5,7 @@ import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth'
 const router = Router();
 const prisma = new PrismaClient();
 
-// Dashboard summary stats
+ 
 router.get('/dashboard', authenticateToken, requireRole('ADMIN', 'ORGANIZER'), async (req: AuthRequest, res: Response) => {
     try {
         const [
@@ -78,7 +78,7 @@ router.get('/dashboard', authenticateToken, requireRole('ADMIN', 'ORGANIZER'), a
     }
 });
 
-// Event participation trends
+ 
 router.get('/events/trends', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { months = 6 } = req.query;
@@ -96,7 +96,7 @@ router.get('/events/trends', authenticateToken, requireRole('ADMIN'), async (req
             orderBy: { date: 'asc' },
         });
 
-        // Group by month
+         
         const trends = events.reduce((acc: any, event) => {
             const month = event.date.toISOString().slice(0, 7);
             if (!acc[month]) {
@@ -113,7 +113,7 @@ router.get('/events/trends', authenticateToken, requireRole('ADMIN'), async (req
     }
 });
 
-// Club activity metrics
+ 
 router.get('/clubs/activity', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const clubs = await prisma.club.findMany({
@@ -147,7 +147,7 @@ router.get('/clubs/activity', authenticateToken, requireRole('ADMIN'), async (re
     }
 });
 
-// Resource utilization
+ 
 router.get('/resources/utilization', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const resources = await prisma.resource.findMany({
@@ -182,7 +182,7 @@ router.get('/resources/utilization', authenticateToken, requireRole('ADMIN'), as
     }
 });
 
-// Budget summary
+ 
 router.get('/budget', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const events = await prisma.event.findMany({
@@ -210,7 +210,7 @@ router.get('/budget', authenticateToken, requireRole('ADMIN'), async (req: AuthR
     }
 });
 
-// CSV Export - Events
+ 
 router.get('/export/events', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const events = await prisma.event.findMany({
@@ -222,7 +222,7 @@ router.get('/export/events', authenticateToken, requireRole('ADMIN'), async (req
             orderBy: { date: 'desc' },
         });
 
-        // Generate CSV
+         
         const headers = ['Title', 'Date', 'End Date', 'Location', 'Status', 'Budget', 'Organizer', 'Club', 'Registrations'];
         const rows = events.map(e => [
             `"${e.title}"`,
@@ -246,7 +246,7 @@ router.get('/export/events', authenticateToken, requireRole('ADMIN'), async (req
     }
 });
 
-// CSV Export - Users
+ 
 router.get('/export/users', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const users = await prisma.user.findMany({
@@ -285,7 +285,7 @@ router.get('/export/users', authenticateToken, requireRole('ADMIN'), async (req:
     }
 });
 
-// CSV Export - Resource Bookings
+ 
 router.get('/export/bookings', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const bookings = await prisma.resourceBooking.findMany({
@@ -321,7 +321,7 @@ router.get('/export/bookings', authenticateToken, requireRole('ADMIN'), async (r
     }
 });
 
-// CSV Export - Clubs
+ 
 router.get('/export/clubs', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const clubs = await prisma.club.findMany({

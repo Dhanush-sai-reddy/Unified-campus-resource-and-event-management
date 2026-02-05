@@ -44,7 +44,7 @@ export default function Chat() {
     const socketRef = useRef<Socket | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Add event room if accessed via URL
+     
     useEffect(() => {
         if (eventId && eventName) {
             const eventRoom: ChatRoom = {
@@ -64,7 +64,7 @@ export default function Chat() {
     }, [eventId, eventName]);
 
     useEffect(() => {
-        // Fetch approved events to list as rooms
+         
         const fetchEventRooms = async () => {
             try {
                 const events = await api.getEvents('APPROVED');
@@ -76,7 +76,7 @@ export default function Chat() {
                 }));
 
                 setRooms(prev => {
-                    // Filter out duplicates based on ID
+                     
                     const existingIds = new Set(prev.map(r => r.id));
                     const newRooms = eventRooms.filter(r => !existingIds.has(r.id));
                     return [...prev, ...newRooms];
@@ -106,13 +106,13 @@ export default function Chat() {
         };
     }, [currentRoom]);
 
-    // Switch rooms
+     
     useEffect(() => {
         if (socketRef.current) {
             socketRef.current.emit('join_room', currentRoom);
-            setMessages([]); // Clear messages when switching rooms
+            setMessages([]);  
 
-            // Fetch history
+             
             api.getChatHistory(currentRoom)
                 .then(history => {
                     setMessages(history);
@@ -145,7 +145,7 @@ export default function Chat() {
 
     return (
         <div className="flex h-[calc(100vh-8rem)] bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden">
-            {/* Sidebar - Room List */}
+            { }
             <div className="w-64 border-r border-surface-200 bg-surface-50 flex flex-col">
                 <div className="p-4 border-b border-surface-200">
                     <h2 className="font-display font-bold text-surface-900 flex items-center gap-2">
@@ -187,7 +187,7 @@ export default function Chat() {
                 </div>
             </div>
 
-            {/* Main Chat Area */}
+            { }
             <div className="flex-1 flex flex-col">
                 <div className="p-4 border-b border-surface-200 bg-white flex items-center justify-between">
                     <div className="flex items-center gap-3">

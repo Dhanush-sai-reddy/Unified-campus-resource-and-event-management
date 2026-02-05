@@ -9,9 +9,9 @@ interface ResourceTimelineProps {
     onBookClick?: (booking: Booking) => void;
 }
 
-const HOUR_WIDTH = 120; // pixels per hour
+const HOUR_WIDTH = 120;  
 const ROW_HEIGHT = 60;
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM to 8 PM
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);  
 
 function getResourceIcon(type: ResourceType) {
     const colors: Record<ResourceType, string> = {
@@ -42,21 +42,21 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
     const [startX, setStartX] = useState(0);
     const [scrollLeft, setScrollLeft] = useState(0);
 
-    // Get bookings for the selected date
+     
     const dateStr = selectedDate.toISOString().split('T')[0];
     const dayBookings = bookings.filter(b => {
         const bookingDate = new Date(b.startTime).toISOString().split('T')[0];
         return bookingDate === dateStr;
     });
 
-    // Navigate dates
+     
     const goToDate = (days: number) => {
         const newDate = new Date(selectedDate);
         newDate.setDate(newDate.getDate() + days);
         setSelectedDate(newDate);
     };
 
-    // Mouse drag handlers
+     
     const handleMouseDown = (e: React.MouseEvent) => {
         if (!scrollRef.current) return;
         setIsDragging(true);
@@ -75,16 +75,16 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
     const handleMouseUp = () => setIsDragging(false);
     const handleMouseLeave = () => setIsDragging(false);
 
-    // Scroll to current time on load
+     
     useEffect(() => {
         if (scrollRef.current) {
             const now = new Date();
-            const currentHour = now.getHours() - 7; // Offset from 7 AM
+            const currentHour = now.getHours() - 7;  
             scrollRef.current.scrollLeft = Math.max(0, currentHour * HOUR_WIDTH - 100);
         }
     }, []);
 
-    // Calculate booking position
+     
     const getBookingStyle = (booking: Booking) => {
         const start = new Date(booking.startTime);
         const end = new Date(booking.endTime);
@@ -107,7 +107,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden">
-            {/* Header */}
+            { }
             <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between bg-gradient-to-r from-primary-50 to-indigo-50">
                 <div className="flex items-center gap-4">
                     <Calendar className="text-primary-600" size={24} />
@@ -117,7 +117,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                     </div>
                 </div>
 
-                {/* Date Navigation */}
+                { }
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => goToDate(-1)}
@@ -149,16 +149,16 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                 </div>
             </div>
 
-            {/* Timeline */}
+            { }
             <div className="flex">
-                {/* Resource Labels (Fixed) */}
+                { }
                 <div className="flex-shrink-0 w-48 border-r border-surface-200 bg-surface-50">
-                    {/* Time header spacer */}
+                    { }
                     <div className="h-10 border-b border-surface-200 px-4 flex items-center">
                         <span className="text-xs font-medium text-surface-500 uppercase">Resources</span>
                     </div>
 
-                    {/* Resource rows */}
+                    { }
                     {resources.map((resource) => (
                         <div
                             key={resource.id}
@@ -176,7 +176,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                     ))}
                 </div>
 
-                {/* Scrollable Timeline */}
+                { }
                 <div
                     ref={scrollRef}
                     className="flex-1 overflow-x-auto cursor-grab active:cursor-grabbing"
@@ -186,7 +186,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                     onMouseLeave={handleMouseLeave}
                     style={{ scrollbarWidth: 'thin' }}
                 >
-                    {/* Time Headers */}
+                    { }
                     <div className="flex h-10 border-b border-surface-200 bg-surface-50 sticky top-0">
                         {HOURS.map((hour) => (
                             <div
@@ -201,7 +201,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                         ))}
                     </div>
 
-                    {/* Resource Rows with Bookings */}
+                    { }
                     {resources.map((resource) => {
                         const resourceBookings = dayBookings.filter(b => b.resourceId === resource.id);
 
@@ -211,7 +211,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                                 className="relative border-b border-surface-100"
                                 style={{ height: ROW_HEIGHT, width: HOURS.length * HOUR_WIDTH }}
                             >
-                                {/* Hour grid lines */}
+                                { }
                                 <div className="absolute inset-0 flex">
                                     {HOURS.map((hour) => (
                                         <div
@@ -222,7 +222,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                                     ))}
                                 </div>
 
-                                {/* Current time indicator */}
+                                { }
                                 {dateStr === new Date().toISOString().split('T')[0] && (
                                     <div
                                         className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
@@ -232,7 +232,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                                     />
                                 )}
 
-                                {/* Booking Blocks */}
+                                { }
                                 {resourceBookings.map((booking) => (
                                     <motion.div
                                         key={booking.id}
@@ -258,7 +258,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                 </div>
             </div>
 
-            {/* Hover Tooltip */}
+            { }
             {hoveredBooking && (
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -302,7 +302,7 @@ export default function ResourceTimeline({ resources, bookings, onBookClick }: R
                 </motion.div>
             )}
 
-            {/* Legend */}
+            { }
             <div className="px-6 py-3 border-t border-surface-100 bg-surface-50 flex items-center gap-6">
                 <span className="text-xs text-surface-500">Status:</span>
                 <div className="flex items-center gap-4">

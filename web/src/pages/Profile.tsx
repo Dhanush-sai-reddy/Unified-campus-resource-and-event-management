@@ -35,8 +35,8 @@ export default function Profile() {
     const stats = [
         { label: 'Events Attended', value: recentEvents.length, icon: <Calendar size={18} /> },
         { label: 'Events Organized', value: organizedEvents.length, icon: <Star size={18} /> },
-        // { label: 'Club Memberships', value: memberships.length, icon: <Users size={18} /> }, // Hiding for now to avoid confusion
-        // { label: 'Achievements', value: 0, icon: <Trophy size={18} /> },
+         
+         
     ];
 
     if (!user) return null;
@@ -48,7 +48,7 @@ export default function Profile() {
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card rounded-2xl overflow-hidden"
             >
-                {/* ... (Header section remains same) ... */}
+                { }
                 <div className="h-32 bg-gradient-to-r from-primary-500 via-indigo-500 to-purple-500 relative">
                     <div className="absolute inset-0 bg-black/10"></div>
                 </div>
@@ -115,23 +115,7 @@ export default function Profile() {
             </div>
 
             <div className="grid grid-cols-1 gap-8">
-                {/* 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass-card rounded-2xl p-6"
-                >
-                    <h2 className="text-lg font-display font-semibold text-surface-900 mb-4 flex items-center gap-2">
-                        <Users className="text-primary-600" size={20} />
-                        Club Memberships
-                    </h2>
-                    <div className="space-y-4">
-                        {memberships.map((club) => (
-                             // ... club logic ... 
-                        ))}
-                    </div>
-                </motion.div>
-                */}
+                { }
 
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

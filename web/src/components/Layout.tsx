@@ -10,7 +10,7 @@ import { Notification } from '../types';
 const pageTitles: Record<string, string> = {
     '/': 'Dashboard',
     '/events': 'Events',
-    // '/resources': 'Resources',
+     
     '/clubs': 'Clubs',
     '/profile': 'Profile',
     '/analytics': 'Analytics',
@@ -37,7 +37,7 @@ export default function Layout() {
         };
         fetchNotifications();
 
-        // Poll for notifications every minute (mock)
+         
         const interval = setInterval(fetchNotifications, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -64,9 +64,9 @@ export default function Layout() {
         <div className="min-h-screen bg-surface-50">
             <Sidebar />
 
-            {/* Main content area */}
+            { }
             <main className="md:ml-64 min-h-screen transition-all duration-300">
-                {/* Header */}
+                { }
                 <header className="sticky top-0 z-10 bg-white/70 backdrop-blur-md border-b border-surface-200/60 h-16 px-4 md:px-8 flex items-center justify-between">
                     <div className="flex items-center gap-4 ml-12 md:ml-0">
                         <motion.h1
@@ -80,7 +80,7 @@ export default function Layout() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Search */}
+                        { }
                         <div className="hidden sm:flex relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={18} />
                             <input
@@ -90,7 +90,7 @@ export default function Layout() {
                             />
                         </div>
 
-                        {/* Notifications */}
+                        { }
                         <div className="relative" ref={notificationRef}>
                             <button
                                 onClick={() => setShowNotifications(!showNotifications)}
@@ -158,7 +158,7 @@ export default function Layout() {
                             </AnimatePresence>
                         </div>
 
-                        {/* User avatar */}
+                        { }
                         {user && (
                             <img
                                 src={user.avatar}
@@ -169,7 +169,7 @@ export default function Layout() {
                     </div>
                 </header>
 
-                {/* Page content */}
+                { }
                 <motion.div
                     key={location.pathname}
                     initial={{ opacity: 0, y: 20 }}

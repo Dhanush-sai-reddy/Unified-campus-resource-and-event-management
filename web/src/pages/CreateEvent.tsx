@@ -161,7 +161,14 @@ export default function CreateEvent() {
         } catch (err: any) {
             console.error("Failed to create event", err);
             const errorMessage = err.response?.data?.error || err.message || "Failed to create event.";
-            alert(errorMessage);
+
+             
+            if (errorMessage.includes("conflicts") && draftBookings.length > 1) {
+                alert("Event created, but some additional resource bookings failed due to conflicts. Please check your schedule.");
+                navigate('/calendar');
+            } else {
+                alert(`Error: ${errorMessage}`);
+            }
             setIsSubmitting(false);
         }
     };

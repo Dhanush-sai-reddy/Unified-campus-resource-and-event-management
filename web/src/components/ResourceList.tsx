@@ -10,7 +10,7 @@ interface ResourceListProps {
 
 const ResourceList: React.FC<ResourceListProps> = ({ currentUser }) => {
   const [resources, setResources] = useState<Resource[]>([]);
-  // bookings removed as unused
+   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +22,7 @@ const ResourceList: React.FC<ResourceListProps> = ({ currentUser }) => {
 
   const fetchData = async () => {
     setLoading(true);
-    // Simulate network delay for effect
+     
     await new Promise(resolve => setTimeout(resolve, 800));
     const [resData] = await Promise.all([api.getResources(), api.getBookings()]);
     setResources(resData);
@@ -37,7 +37,7 @@ const ResourceList: React.FC<ResourceListProps> = ({ currentUser }) => {
     setSelectedResource(resource);
     setIsModalOpen(true);
     setError(null);
-    // Set default times for convenience
+     
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     setStartTime(now.toISOString().slice(0, 16));

@@ -99,7 +99,7 @@ func CreateBooking(c *fiber.Ctx) error {
 	startTime, _ := time.Parse(time.RFC3339, input.StartTime)
 	endTime, _ := time.Parse(time.RFC3339, input.EndTime)
 
-	// Check for conflicts
+	 
 	pool := db.GetPool()
 	var conflictCount int
 	err := pool.QueryRow(context.Background(), `
@@ -124,7 +124,7 @@ func CreateBooking(c *fiber.Ctx) error {
 		})
 	}
 
-	// Create booking
+	 
 	id := uuid.New().String()
 	_, err = pool.Exec(context.Background(), `
 		INSERT INTO bookings (id, resource_id, user_id, user_name, event_name, start_time, end_time, status)

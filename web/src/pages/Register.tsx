@@ -64,7 +64,7 @@ export default function Register() {
 
     return (
         <div className="min-h-screen flex">
-            {/* Left side - Branding */}
+            { }
             <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 p-12 flex-col justify-between relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10">
                     <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
@@ -88,7 +88,7 @@ export default function Register() {
                         Connect with clubs, attend events, and access campus resources all in one place.
                     </p>
 
-                    {/* Step indicator */}
+                    { }
                     <div className="mt-8 flex items-center gap-4">
                         {[1, 2].map((s) => (
                             <div key={s} className="flex items-center gap-2">

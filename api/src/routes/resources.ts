@@ -6,7 +6,7 @@ import { auditLog } from '../services/gitAudit';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get all resources
+ 
 router.get('/', async (req, res) => {
     try {
         const { type, available } = req.query;
@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get resource by ID with bookings
+ 
 router.get('/:id', async (req, res) => {
     try {
         const resource = await prisma.resource.findUnique({
@@ -57,7 +57,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create resource (admin only)
+ 
 router.post('/', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { name, type, description, location, capacity, image, requiresApproval } = req.body;
@@ -83,7 +83,7 @@ router.post('/', authenticateToken, requireRole('ADMIN'), async (req: AuthReques
     }
 });
 
-// Update resource (admin only)
+ 
 router.put('/:id', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { name, type, description, location, capacity, image, isAvailable, requiresApproval } = req.body;
@@ -110,7 +110,7 @@ router.put('/:id', authenticateToken, requireRole('ADMIN'), async (req: AuthRequ
     }
 });
 
-// Delete resource (admin only)
+ 
 router.delete('/:id', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         await prisma.resource.delete({
@@ -127,7 +127,7 @@ router.delete('/:id', authenticateToken, requireRole('ADMIN'), async (req: AuthR
 
 import { hasConflict } from '../services/bookingService';
 
-// Get resource availability for a date range
+ 
 router.get('/:id/availability', async (req, res) => {
     try {
         const { start, end } = req.query;
@@ -181,7 +181,7 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
             return res.status(409).json({ error: 'Time slot conflict' });
         }
 
-        // Get resource to check if approval is required
+         
         const resource = await prisma.resource.findUnique({
             where: { id: req.params.id },
         });
@@ -226,7 +226,7 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
     }
 });
 
-// Get all bookings (filterable)
+ 
 router.get('/bookings/all', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { status, resourceId, userId, upcoming } = req.query;
@@ -252,7 +252,7 @@ router.get('/bookings/all', authenticateToken, async (req: AuthRequest, res: Res
     }
 });
 
-// Get user's bookings
+ 
 router.get('/bookings/my', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const bookings = await prisma.resourceBooking.findMany({
@@ -270,7 +270,7 @@ router.get('/bookings/my', authenticateToken, async (req: AuthRequest, res: Resp
     }
 });
 
-// Update booking (e.g. reschedule)
+ 
 router.put('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { startTime, endTime, title, purpose } = req.body;
@@ -278,13 +278,13 @@ router.put('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Res
         const booking = await prisma.resourceBooking.findUnique({ where: { id: req.params.id } });
         if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-        // Authorization
+         
         const user = await prisma.user.findUnique({ where: { id: req.userId } });
         if (booking.userId !== req.userId && user?.role !== 'ADMIN') {
             return res.status(403).json({ error: 'Not authorized' });
         }
 
-        // Conflict check if time changed
+         
         if (startTime && endTime) {
             const start = new Date(startTime);
             const end = new Date(endTime);
@@ -310,13 +310,13 @@ router.put('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Res
     }
 });
 
-// Delete booking
+ 
 router.delete('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const booking = await prisma.resourceBooking.findUnique({ where: { id: req.params.id } });
         if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-        // Authorization
+         
         const user = await prisma.user.findUnique({ where: { id: req.userId } });
         if (booking.userId !== req.userId && user?.role !== 'ADMIN') {
             return res.status(403).json({ error: 'Not authorized' });
@@ -331,7 +331,7 @@ router.delete('/bookings/:id', authenticateToken, async (req: AuthRequest, res: 
     }
 });
 
-// Approve booking (admin only)
+ 
 router.post('/bookings/:bookingId/approve', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { adminNotes } = req.body;
@@ -360,7 +360,7 @@ router.post('/bookings/:bookingId/approve', authenticateToken, requireRole('ADMI
     }
 });
 
-// Reject booking (admin only)
+ 
 router.post('/bookings/:bookingId/reject', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { adminNotes } = req.body;
@@ -385,7 +385,7 @@ router.post('/bookings/:bookingId/reject', authenticateToken, requireRole('ADMIN
     }
 });
 
-// Cancel booking (owner or admin)
+ 
 router.post('/bookings/:bookingId/cancel', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const booking = await prisma.resourceBooking.findUnique({
@@ -396,7 +396,7 @@ router.post('/bookings/:bookingId/cancel', authenticateToken, async (req: AuthRe
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        // Check authorization
+         
         const user = await prisma.user.findUnique({ where: { id: req.userId } });
         if (booking.userId !== req.userId && user?.role !== 'ADMIN') {
             return res.status(403).json({ error: 'Not authorized to cancel this booking' });
@@ -418,7 +418,7 @@ router.post('/bookings/:bookingId/cancel', authenticateToken, async (req: AuthRe
     }
 });
 
-// Get booking statistics (admin)
+ 
 router.get('/stats/utilization', authenticateToken, requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
     try {
         const { startDate, endDate } = req.query;
@@ -426,7 +426,7 @@ router.get('/stats/utilization', authenticateToken, requireRole('ADMIN'), async 
         const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const end = endDate ? new Date(endDate as string) : new Date();
 
-        // Get booking counts by resource
+         
         const resourceStats = await prisma.resourceBooking.groupBy({
             by: ['resourceId'],
             where: {
@@ -437,7 +437,7 @@ router.get('/stats/utilization', authenticateToken, requireRole('ADMIN'), async 
             _count: { id: true },
         });
 
-        // Get resources for names
+         
         const resources = await prisma.resource.findMany({
             select: { id: true, name: true, type: true },
         });
@@ -452,7 +452,7 @@ router.get('/stats/utilization', authenticateToken, requireRole('ADMIN'), async 
             };
         });
 
-        // Get overall stats
+         
         const totalBookings = await prisma.resourceBooking.count({
             where: {
                 startTime: { gte: start },

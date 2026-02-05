@@ -28,38 +28,38 @@ export const MOCK_USERS: User[] = [
 ];
 
 export const MOCK_RESOURCES: Resource[] = [
-  // Auditoriums
+   
   { id: 'r1', name: 'Main Auditorium', type: ResourceType.ROOM, capacity: 500, isAvailable: true, requiresApproval: true },
   { id: 'r2', name: 'Mini Auditorium', type: ResourceType.ROOM, capacity: 200, isAvailable: true, requiresApproval: false },
 
-  // Lecture Halls
+   
   { id: 'r3', name: 'Lecture Hall 101', type: ResourceType.ROOM, capacity: 120, isAvailable: true, requiresApproval: false },
   { id: 'r4', name: 'Lecture Hall 102', type: ResourceType.ROOM, capacity: 120, isAvailable: true, requiresApproval: false },
   { id: 'r5', name: 'Lecture Hall 201', type: ResourceType.ROOM, capacity: 80, isAvailable: false, requiresApproval: false },
   { id: 'r6', name: 'Lecture Hall 202', type: ResourceType.ROOM, capacity: 80, isAvailable: true, requiresApproval: false },
 
-  // Conference Rooms
+   
   { id: 'r7', name: 'Conference Room A', type: ResourceType.ROOM, capacity: 25, isAvailable: true, requiresApproval: true },
   { id: 'r8', name: 'Conference Room B', type: ResourceType.ROOM, capacity: 25, isAvailable: true, requiresApproval: true },
   { id: 'r9', name: 'Board Room', type: ResourceType.ROOM, capacity: 15, isAvailable: true, requiresApproval: true },
 
-  // Labs
+   
   { id: 'r10', name: 'Computer Lab 1', type: ResourceType.ROOM, capacity: 60, isAvailable: true, requiresApproval: true },
   { id: 'r11', name: 'Computer Lab 2', type: ResourceType.ROOM, capacity: 60, isAvailable: true, requiresApproval: true },
   { id: 'r12', name: 'Electronics Lab', type: ResourceType.ROOM, capacity: 40, isAvailable: false, requiresApproval: true },
   { id: 'r13', name: 'Physics Lab', type: ResourceType.ROOM, capacity: 40, isAvailable: true, requiresApproval: true },
   { id: 'r14', name: 'Chemistry Lab', type: ResourceType.ROOM, capacity: 40, isAvailable: true, requiresApproval: true },
 
-  // Seminar Halls
+   
   { id: 'r15', name: 'Seminar Hall A', type: ResourceType.ROOM, capacity: 50, isAvailable: true, requiresApproval: false },
   { id: 'r16', name: 'Seminar Hall B', type: ResourceType.ROOM, capacity: 50, isAvailable: true, requiresApproval: false },
 
-  // Open Spaces
+   
   { id: 'r17', name: 'Open Air Theatre', type: ResourceType.ROOM, capacity: 300, isAvailable: true, requiresApproval: true },
   { id: 'r18', name: 'Central Lawn', type: ResourceType.ROOM, capacity: 500, isAvailable: true, requiresApproval: true },
   { id: 'r19', name: 'Sports Ground', type: ResourceType.ROOM, capacity: 1000, isAvailable: true, requiresApproval: true },
 
-  // Equipment - Audio/Visual
+   
   { id: 'e1', name: 'Projector (HD)', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
   { id: 'e2', name: 'Projector (4K)', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
   { id: 'e3', name: 'LED Screen 65"', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
@@ -69,19 +69,19 @@ export const MOCK_RESOURCES: Resource[] = [
   { id: 'e7', name: 'Wireless Mic Set (4)', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
   { id: 'e8', name: 'Lavalier Mic Set (2)', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
 
-  // Equipment - Recording
+   
   { id: 'e9', name: 'DSLR Camera Kit', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: true },
   { id: 'e10', name: 'Video Camera (4K)', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: true },
   { id: 'e11', name: 'Tripod Stand', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
   { id: 'e12', name: 'Ring Light Set', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
   { id: 'e13', name: 'Green Screen', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
 
-  // Equipment - Computing
+   
   { id: 'e14', name: 'Laptop Cart (20 units)', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: true },
   { id: 'e15', name: 'iPad Set (10 units)', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: true },
   { id: 'e16', name: 'VR Headset Set (5)', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: true },
 
-  // Equipment - Event
+   
   { id: 'e17', name: 'Portable Stage', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: true },
   { id: 'e18', name: 'Backdrop Stand', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },
   { id: 'e19', name: 'Registration Desk Set', type: ResourceType.EQUIPMENT, isAvailable: true, requiresApproval: false },

@@ -22,12 +22,12 @@ func Connect() error {
 		return fmt.Errorf("unable to connect to database: %w", err)
 	}
 
-	// Test connection
+	 
 	if err := pool.Ping(context.Background()); err != nil {
 		return fmt.Errorf("unable to ping database: %w", err)
 	}
 
-	// Initialize tables
+	 
 	if err := initTables(); err != nil {
 		return fmt.Errorf("failed to initialize tables: %w", err)
 	}
@@ -49,7 +49,7 @@ func GetPool() *pgxpool.Pool {
 func initTables() error {
 	ctx := context.Background()
 
-	// Create resources table
+	 
 	_, err := pool.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS resources (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -65,7 +65,7 @@ func initTables() error {
 		return err
 	}
 
-	// Create bookings table (hypertable for time-series)
+	 
 	_, err = pool.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS bookings (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -83,8 +83,8 @@ func initTables() error {
 		return err
 	}
 
-	// Try to convert to hypertable (TimescaleDB specific)
-	// This may fail if already a hypertable or if TimescaleDB extension is not enabled
+	 
+	 
 	pool.Exec(ctx, `SELECT create_hypertable('bookings', 'start_time', if_not_exists => TRUE)`)
 
 	return nil

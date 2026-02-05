@@ -36,11 +36,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
     return (
         <Routes>
-            {/* Public routes */}
+            { }
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
-            {/* Protected routes */}
+            { }
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 <Route index element={<HomeRedirect />} />
                 <Route path="events" element={<Events />} />
@@ -54,7 +54,7 @@ function AppRoutes() {
                 <Route path="chat" element={<Chat />} />
             </Route>
 
-            {/* Fallback */}
+            { }
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
