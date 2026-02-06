@@ -16,7 +16,8 @@ The system features a high-performance **Go-based Scheduler** for conflict detec
 ## Key Features
 
 -   **Microservices Ecosystem**: Decoupled services for API (Node.js) and Scheduling (Go), ensuring scalability and fault tolerance.
--   **High-Resolution Conflict Detection**: Uses **Interval Trees** in Go to process 500+ overlapping booking queries in under 10ms.
+-   **Multi-Resource Orchestration**: Capable of booking multiple venues (e.g., Auditorium + Computer Lab) for a single event with **atomic conflict validation** across all resources.
+-   **High-Resolution Conflict Detection**: Uses **Partitioned Interval Trees** in Go (one tree per resource) to process 500+ concurrent overlapping booking queries in under 10ms.
 -   **Real-time Collaboration**: Integrated **Socket.io** to enable instant peer-to-peer chat and team communication.
 -   **Custom Calendar Engine**: A scratch-built drag-and-drop interface in React for intuitive time-slot selection and resource visualization.
 -   **Optimized Data Flow**: Efficient Nginx Reverse Proxy routing and atomic database transactions using PostgreSQL.

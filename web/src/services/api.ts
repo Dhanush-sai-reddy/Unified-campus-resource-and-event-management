@@ -1,5 +1,17 @@
 import { API_BASE_URL } from '../config';
 import { Event, Booking, Notification } from '../types';
+import { MOCK_RESOURCES, INITIAL_EVENTS, INITIAL_BOOKINGS } from '../constants';
+import {
+    MOCK_NOTIFICATIONS,
+    MOCK_CHAT_HISTORY,
+    MOCK_DASHBOARD_STATS,
+    MOCK_EVENT_TRENDS,
+    MOCK_RESOURCE_UTILIZATION,
+    MOCK_CLUB_ACTIVITY,
+    MOCK_CLUBS,
+    MOCK_BUDGET_SUMMARY,
+    MOCK_CURRENT_USER
+} from './mockData';
 
 const getHeaders = () => {
     const token = localStorage.getItem('token');
@@ -9,7 +21,7 @@ const getHeaders = () => {
     };
 };
 
-export const api = {
+const RealApi = {
     getCurrentUser: async () => {
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
             headers: getHeaders(),
@@ -277,3 +289,152 @@ export const api = {
         document.body.removeChild(a);
     }
 };
+
+const MockApi = {
+    getCurrentUser: async () => {
+        // console.log('[MOCK] getCurrentUser');
+        return MOCK_CURRENT_USER;
+    },
+
+    getEvents: async (_params?: string | { status?: string; organizerId?: string }): Promise<Event[]> => {
+        // console.log('[MOCK] getEvents', params);
+        return INITIAL_EVENTS;
+    },
+
+    getMyEvents: async (): Promise<Event[]> => {
+        // console.log('[MOCK] getMyEvents');
+        return INITIAL_EVENTS.filter(e => e.organizerId === MOCK_CURRENT_USER.id);
+    },
+
+    getResources: async (): Promise<any[]> => {
+        // console.log('[MOCK] getResources');
+        return MOCK_RESOURCES;
+    },
+
+    createResource: async (data: any) => {
+        console.log('[MOCK] createResource', data);
+        return { ...data, id: `mock-r-${Date.now()}` };
+    },
+
+    updateResource: async (id: string, data: any) => {
+        console.log('[MOCK] updateResource', id, data);
+        return { ...data, id };
+    },
+
+    deleteResource: async (id: string) => {
+        console.log('[MOCK] deleteResource', id);
+        return { success: true };
+    },
+
+    getBookings: async (_params?: any): Promise<Booking[]> => {
+        // console.log('[MOCK] getBookings', params);
+        return INITIAL_BOOKINGS;
+    },
+
+    getAvailability: async (_resourceId: string, _start: string, _end: string) => {
+        // console.log('[MOCK] getAvailability', resourceId);
+        return []; // Always available in mock
+    },
+
+    createEvent: async (data: Partial<Event>) => {
+        console.log('[MOCK] createEvent', data);
+        return { ...data, id: `mock-e-${Date.now()}`, status: 'PENDING' };
+    },
+
+    updateEvent: async (id: string, data: Partial<Event>) => {
+        console.log('[MOCK] updateEvent', id, data);
+        return { ...data, id };
+    },
+
+    deleteEvent: async (id: string) => {
+        console.log('[MOCK] deleteEvent', id);
+        return { success: true };
+    },
+
+    approveEvent: async (id: string) => {
+        console.log('[MOCK] approveEvent', id);
+        return { success: true };
+    },
+
+    rejectEvent: async (id: string, reason?: string) => {
+        console.log('[MOCK] rejectEvent', id, reason);
+        return { success: true };
+    },
+
+    createBooking: async (resourceId: string, data: Partial<Booking>) => {
+        console.log('[MOCK] createBooking', resourceId, data);
+        return { ...data, id: `mock-b-${Date.now()}`, resourceId, status: 'PENDING' };
+    },
+
+    updateBooking: async (id: string, data: Partial<Booking>) => {
+        console.log('[MOCK] updateBooking', id, data);
+        return { ...data, id };
+    },
+
+    deleteBooking: async (id: string) => {
+        console.log('[MOCK] deleteBooking', id);
+        return { success: true };
+    },
+
+    getNotifications: async (): Promise<Notification[]> => {
+        // console.log('[MOCK] getNotifications');
+        return MOCK_NOTIFICATIONS;
+    },
+
+    markNotificationRead: async (id: string) => {
+        console.log('[MOCK] markNotificationRead', id);
+        return { success: true };
+    },
+
+    getChatHistory: async (_roomId: string): Promise<any[]> => {
+        // console.log('[MOCK] getChatHistory', roomId);
+        return MOCK_CHAT_HISTORY;
+    },
+
+    getDashboardStats: async () => {
+        // console.log('[MOCK] getDashboardStats');
+        return MOCK_DASHBOARD_STATS;
+    },
+
+    getEventTrends: async () => {
+        // console.log('[MOCK] getEventTrends');
+        return MOCK_EVENT_TRENDS;
+    },
+
+    getResourceUtilization: async () => {
+        // console.log('[MOCK] getResourceUtilization');
+        return MOCK_RESOURCE_UTILIZATION;
+    },
+
+    getClubActivity: async () => {
+        // console.log('[MOCK] getClubActivity');
+        return MOCK_CLUB_ACTIVITY;
+    },
+
+    getClubs: async () => {
+        // console.log('[MOCK] getClubs');
+        return MOCK_CLUBS;
+    },
+
+    joinClub: async (id: string) => {
+        console.log('[MOCK] joinClub', id);
+        return { success: true };
+    },
+
+    leaveClub: async (id: string) => {
+        console.log('[MOCK] leaveClub', id);
+        return { success: true };
+    },
+
+    getBudgetSummary: async () => {
+        // console.log('[MOCK] getBudgetSummary');
+        return MOCK_BUDGET_SUMMARY;
+    },
+
+    exportData: async (type: 'events' | 'users' | 'bookings' | 'clubs') => {
+        console.log('[MOCK] exportData', type);
+        alert(`[MOCK] Exporting ${type} data...`);
+    }
+};
+
+export const api = import.meta.env.VITE_USE_MOCKS === 'true' ? MockApi : RealApi;

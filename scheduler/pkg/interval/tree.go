@@ -95,12 +95,7 @@ func query(n *Node, start, end int64, result *[]Interval) {
 	}
 }
 
-// Delete removes an interval from the tree.
-// Note: This is a simplified deletion that rebuilds the node list for the specific path or lazy deletes.
-// For a production system, a full rebalancing deletion is needed.
-// However, for this use case, we will look up by ID? No, the tree is spatial.
-// To support Delete(ID), we need an auxiliary map[ID]*Node.
-// Given the constraints, we will implement a DeleteByRangeAndID.
+// Delete removes an interval from the tree by standard BST deletion logic.
 func (t *Tree) Delete(start, end int64, id string) {
 	t.Root = deleteNode(t.Root, start, end, id)
 }
@@ -110,19 +105,13 @@ func deleteNode(n *Node, start, end int64, id string) *Node {
 		return nil
 	}
 
-	// Logic: Find the node. If found, remove it.
-	// Standard BST deletion but complicated by Intervals.
-	// Simplification: If we find it, we return the merge of children.
-
 	if n.Interval.Start == start && n.Interval.End == end && n.Interval.ID == id {
-		// Found node
 		if n.Left == nil {
 			return n.Right
 		} else if n.Right == nil {
 			return n.Left
 		}
 
-		// Two children: Swap with successor (min of right subtree)
 		successor := n.Right
 		for successor.Left != nil {
 			successor = successor.Left
@@ -131,7 +120,6 @@ func deleteNode(n *Node, start, end int64, id string) *Node {
 		n.Interval = successor.Interval
 		n.Right = deleteNode(n.Right, successor.Interval.Start, successor.Interval.End, successor.Interval.ID)
 
-		// Update max after swap
 		n.Max = max(n.Interval.End, max(getMax(n.Left), getMax(n.Right)))
 		return n
 	}

@@ -105,7 +105,6 @@ func (m *Manager) AddBooking(resourceID, bookingID, status string, start, end ti
 }
 
 // RemoveBooking removes a booking from the in-memory tree
-// We need start and end times because the tree is indexed by time.
 func (m *Manager) RemoveBooking(resourceID, bookingID string, start, end time.Time) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

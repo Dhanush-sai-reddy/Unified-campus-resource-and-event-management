@@ -151,6 +151,17 @@ func UpdateBookingStatus(c *fiber.Ctx) error {
 	}
 
 	pool := db.GetPool()
+
+	// If rejecting/cancelling, we must remove from the tree to free up the slot
+	if (input.Status == "CANCELLED" || input.Status == "REJECTED") && intervalManager != nil {
+		var b Booking
+		// Fetch details to identify the interval
+		err := pool.QueryRow(context.Background(), `SELECT resource_id, start_time, end_time FROM bookings WHERE id = $1`, id).Scan(&b.ResourceID, &b.StartTime, &b.EndTime)
+		if err == nil {
+			intervalManager.RemoveBooking(b.ResourceID, id, b.StartTime, b.EndTime)
+		}
+	}
+
 	_, err := pool.Exec(context.Background(), `
 		UPDATE bookings SET status = $1 WHERE id = $2
 	`, input.Status, id)
