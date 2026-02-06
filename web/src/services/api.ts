@@ -1,5 +1,5 @@
-import { API_BASE_URL } from '../config';
-import { Event, Booking, Notification } from '../types';
+
+import { Event, Booking, Notification, UserRole } from '../types';
 import { MOCK_RESOURCES, INITIAL_EVENTS, INITIAL_BOOKINGS } from '../constants';
 import {
     MOCK_NOTIFICATIONS,
@@ -13,450 +13,209 @@ import {
     MOCK_CURRENT_USER
 } from './mockData';
 
-const getHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
-    };
-};
+// --- Local State ---
+let events: Event[] = [...INITIAL_EVENTS];
+let bookings: Booking[] = [...INITIAL_BOOKINGS];
+let resources = [...MOCK_RESOURCES];
+let notifications = [...MOCK_NOTIFICATIONS];
+let clubs = [...MOCK_CLUBS];
 
-const RealApi = {
+const simulateDelay = () => new Promise(resolve => setTimeout(resolve, 600));
+
+// --- Pure Frontend "Data Service" ---
+export const api = {
     getCurrentUser: async () => {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch current user');
-        return response.json();
-    },
-
-    getEvents: async (params?: string | { status?: string; organizerId?: string }): Promise<Event[]> => {
-        let query = '';
-        if (typeof params === 'string') {
-            query = params ? `?status=${params}` : '';
-        } else if (params) {
-            const queryParams = new URLSearchParams();
-            if (params.status) queryParams.append('status', params.status);
-            if (params.organizerId) queryParams.append('organizerId', params.organizerId);
-            query = `?${queryParams.toString()}`;
-        }
-
-        const response = await fetch(`${API_BASE_URL}/events${query}`, {
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch events');
-        return response.json();
-    },
-
-    getMyEvents: async (): Promise<Event[]> => {
-        const response = await fetch(`${API_BASE_URL}/events/my/registered`, {
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch my events');
-        return response.json();
-    },
-
-    getResources: async (): Promise<any[]> => {
-        const response = await fetch(`${API_BASE_URL}/resources?available=true`, {
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch resources');
-        return response.json();
-    },
-
-    createResource: async (data: any) => {
-        const response = await fetch(`${API_BASE_URL}/resources`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to create resource');
-        return response.json();
-    },
-
-    updateResource: async (id: string, data: any) => {
-        const response = await fetch(`${API_BASE_URL}/resources/${id}`, {
-            method: 'PUT',
-            headers: getHeaders(),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to update resource');
-        return response.json();
-    },
-
-    deleteResource: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/resources/${id}`, {
-            method: 'DELETE',
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to delete resource');
-        return response.json();
-    },
-
-    getBookings: async (params?: {
-        status?: string;
-        resourceId?: string;
-        upcoming?: boolean;
-        date?: string;
-    }): Promise<Booking[]> => {
-        const query = new URLSearchParams(params as any).toString();
-        const response = await fetch(`${API_BASE_URL}/resources/bookings/all?${query}`, {
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch bookings');
-        return response.json();
-    },
-
-    login: async (email: string, password: string) => {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-
-        if (!response.ok) {
-            throw new Error('Invalid credentials');
-        }
-
-        return response.json();
-    },
-
-    getAvailability: async (resourceId: string, start: string, end: string) => {
-        const response = await fetch(`${API_BASE_URL}/resources/${resourceId}/availability?start=${start}&end=${end}`, {
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch availability');
-        return response.json();
-    },
-
-    createEvent: async (data: Partial<Event>) => {
-        const response = await fetch(`${API_BASE_URL}/events`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to create event');
-        return response.json();
-    },
-
-    updateEvent: async (id: string, data: Partial<Event>) => {
-        const response = await fetch(`${API_BASE_URL}/events/${id}`, {
-            method: 'PUT',
-            headers: getHeaders(),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to update event');
-        return response.json();
-    },
-
-    deleteEvent: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/events/${id}`, {
-            method: 'DELETE',
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to delete event');
-        return response.json();
-    },
-
-    approveEvent: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/events/${id}/approve`, {
-            method: 'POST',
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to approve event');
-        return response.json();
-    },
-
-    rejectEvent: async (id: string, reason?: string) => {
-        const response = await fetch(`${API_BASE_URL}/events/${id}/reject`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({ reason }),
-        });
-        if (!response.ok) throw new Error('Failed to reject event');
-        return response.json();
-    },
-
-    createBooking: async (resourceId: string, data: Partial<Booking>) => {
-        const response = await fetch(`${API_BASE_URL}/resources/${resourceId}/book`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || 'Failed to create booking');
-        }
-        return response.json();
-    },
-
-    updateBooking: async (id: string, data: Partial<Booking>) => {
-        const response = await fetch(`${API_BASE_URL}/resources/bookings/${id}`, {
-            method: 'PUT',
-            headers: getHeaders(),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to update booking');
-        return response.json();
-    },
-
-    deleteBooking: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/resources/bookings/${id}`, {
-            method: 'DELETE',
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to delete booking');
-        return response.json();
-    },
-
-    getNotifications: async (): Promise<Notification[]> => {
-        const response = await fetch(`${API_BASE_URL}/notifications`, {
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch notifications');
-        return response.json();
-    },
-
-    markNotificationRead: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
-            method: 'PUT',
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to mark notification as read');
-        return response.json();
-    },
-
-    getChatHistory: async (roomId: string): Promise<any[]> => {
-        const response = await fetch(`${API_BASE_URL}/chat/${roomId}`, {
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch chat history');
-        return response.json();
-    },
-
-    getDashboardStats: async () => {
-        const response = await fetch(`${API_BASE_URL}/analytics/dashboard`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch dashboard stats');
-        return response.json();
-    },
-
-    getEventTrends: async () => {
-        const response = await fetch(`${API_BASE_URL}/analytics/events/trends`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch event trends');
-        return response.json();
-    },
-
-    getResourceUtilization: async () => {
-        const response = await fetch(`${API_BASE_URL}/analytics/resources/utilization`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch resource utilization');
-        return response.json();
-    },
-
-    getClubActivity: async () => {
-        const response = await fetch(`${API_BASE_URL}/analytics/clubs/activity`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch club activity');
-        return response.json();
-    },
-
-    getClubs: async () => {
-        const response = await fetch(`${API_BASE_URL}/clubs`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch clubs');
-        return response.json();
-    },
-
-    joinClub: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/clubs/${id}/join`, {
-            method: 'POST',
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to join club');
-        return response.json();
-    },
-
-    leaveClub: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/clubs/${id}/leave`, {
-            method: 'DELETE',
-            headers: getHeaders(),
-        });
-        if (!response.ok) throw new Error('Failed to leave club');
-        return response.json();
-    },
-
-    getBudgetSummary: async () => {
-        const response = await fetch(`${API_BASE_URL}/analytics/budget`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch budget summary');
-        return response.json();
-    },
-
-    exportData: async (type: 'events' | 'users' | 'bookings' | 'clubs') => {
-        const response = await fetch(`${API_BASE_URL}/analytics/export/${type}`, { headers: getHeaders() });
-        if (!response.ok) throw new Error(`Failed to export ${type}`);
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${type}_export.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-    }
-};
-
-const MockApi = {
-    getCurrentUser: async () => {
-        // console.log('[MOCK] getCurrentUser');
+        await simulateDelay();
         return MOCK_CURRENT_USER;
     },
 
-    getEvents: async (_params?: string | { status?: string; organizerId?: string }): Promise<Event[]> => {
-        // console.log('[MOCK] getEvents', params);
-        return INITIAL_EVENTS;
+    getEvents: async (params?: string | { status?: string; organizerId?: string }): Promise<Event[]> => {
+        await simulateDelay();
+        let filtered = events;
+        if (typeof params === 'object') {
+            if (params.status) filtered = filtered.filter(e => e.status === params.status);
+            if (params.organizerId) filtered = filtered.filter(e => e.organizerId === params.organizerId);
+        }
+        return filtered;
     },
 
     getMyEvents: async (): Promise<Event[]> => {
-        // console.log('[MOCK] getMyEvents');
-        return INITIAL_EVENTS.filter(e => e.organizerId === MOCK_CURRENT_USER.id);
+        await simulateDelay();
+        return events.filter(e => e.organizerId === MOCK_CURRENT_USER.id);
     },
 
     getResources: async (): Promise<any[]> => {
-        // console.log('[MOCK] getResources');
-        return MOCK_RESOURCES;
+        await simulateDelay();
+        return resources;
     },
 
     createResource: async (data: any) => {
-        console.log('[MOCK] createResource', data);
-        return { ...data, id: `mock-r-${Date.now()}` };
+        await simulateDelay();
+        const newResource = { ...data, id: `mock-r-${Date.now()}` };
+        resources.push(newResource);
+        return newResource;
     },
 
     updateResource: async (id: string, data: any) => {
-        console.log('[MOCK] updateResource', id, data);
+        await simulateDelay();
+        resources = resources.map(r => r.id === id ? { ...r, ...data } : r);
         return { ...data, id };
     },
 
     deleteResource: async (id: string) => {
-        console.log('[MOCK] deleteResource', id);
+        await simulateDelay();
+        resources = resources.filter(r => r.id !== id);
         return { success: true };
     },
 
     getBookings: async (_params?: any): Promise<Booking[]> => {
-        // console.log('[MOCK] getBookings', params);
-        return INITIAL_BOOKINGS;
+        await simulateDelay();
+        return bookings;
     },
 
     login: async (email: string, _password: string) => {
-        console.log('[MOCK] login', email);
+        await simulateDelay();
+        console.log('[MockData] Auto-Login Admin:', email);
         return {
-            user: MOCK_CURRENT_USER,
-            token: 'mock-token-123'
+            user: { ...MOCK_CURRENT_USER, email, role: UserRole.ADMIN }, // Force Admin Role
+            token: 'mock-token-auto-admin'
         };
     },
 
     getAvailability: async (_resourceId: string, _start: string, _end: string) => {
-        // console.log('[MOCK] getAvailability', resourceId);
-        return []; // Always available in mock
+        await simulateDelay();
+        return []; // Always available for demo
     },
 
     createEvent: async (data: Partial<Event>) => {
-        console.log('[MOCK] createEvent', data);
-        return { ...data, id: `mock-e-${Date.now()}`, status: 'PENDING' };
+        await simulateDelay();
+        const newEvent = {
+            ...data,
+            id: `mock-e-${Date.now()}`,
+            status: 'PENDING',
+            organizerId: MOCK_CURRENT_USER.id,
+            organizerName: MOCK_CURRENT_USER.name
+        } as Event;
+        events.push(newEvent);
+        return newEvent;
     },
 
     updateEvent: async (id: string, data: Partial<Event>) => {
-        console.log('[MOCK] updateEvent', id, data);
+        await simulateDelay();
+        events = events.map(e => e.id === id ? { ...e, ...data } : e);
         return { ...data, id };
     },
 
     deleteEvent: async (id: string) => {
-        console.log('[MOCK] deleteEvent', id);
+        await simulateDelay();
+        events = events.filter(e => e.id !== id);
         return { success: true };
     },
 
     approveEvent: async (id: string) => {
-        console.log('[MOCK] approveEvent', id);
+        await simulateDelay();
+        events = events.map(e => e.id === id ? { ...e, status: 'APPROVED' } : e);
         return { success: true };
     },
 
-    rejectEvent: async (id: string, reason?: string) => {
-        console.log('[MOCK] rejectEvent', id, reason);
+    rejectEvent: async (id: string, _reason?: string) => {
+        await simulateDelay();
+        events = events.map(e => e.id === id ? { ...e, status: 'REJECTED' } : e);
         return { success: true };
     },
 
     createBooking: async (resourceId: string, data: Partial<Booking>) => {
-        console.log('[MOCK] createBooking', resourceId, data);
-        return { ...data, id: `mock-b-${Date.now()}`, resourceId, status: 'PENDING' };
+        await simulateDelay();
+        const newBooking = {
+            ...data,
+            id: `mock-b-${Date.now()}`,
+            resourceId,
+            status: 'PENDING',
+            userId: MOCK_CURRENT_USER.id,
+            userName: MOCK_CURRENT_USER.name
+        } as Booking;
+        bookings.push(newBooking);
+        return newBooking;
     },
 
     updateBooking: async (id: string, data: Partial<Booking>) => {
-        console.log('[MOCK] updateBooking', id, data);
+        await simulateDelay();
+        bookings = bookings.map(b => b.id === id ? { ...b, ...data } : b);
         return { ...data, id };
     },
 
     deleteBooking: async (id: string) => {
-        console.log('[MOCK] deleteBooking', id);
+        await simulateDelay();
+        bookings = bookings.filter(b => b.id !== id);
         return { success: true };
     },
 
     getNotifications: async (): Promise<Notification[]> => {
-        // console.log('[MOCK] getNotifications');
-        return MOCK_NOTIFICATIONS;
+        await simulateDelay();
+        return notifications;
     },
 
     markNotificationRead: async (id: string) => {
-        console.log('[MOCK] markNotificationRead', id);
+        await simulateDelay();
+        notifications = notifications.map(n => n.id === id ? { ...n, isRead: true } : n);
         return { success: true };
     },
 
     getChatHistory: async (_roomId: string): Promise<any[]> => {
-        // console.log('[MOCK] getChatHistory', roomId);
+        await simulateDelay();
         return MOCK_CHAT_HISTORY;
     },
 
     getDashboardStats: async () => {
-        // console.log('[MOCK] getDashboardStats');
-        return MOCK_DASHBOARD_STATS;
+        await simulateDelay();
+        // Recalculate stats based on local state
+        return {
+            ...MOCK_DASHBOARD_STATS,
+            totalEvents: events.length,
+            totalBookings: bookings.length
+        };
     },
 
     getEventTrends: async () => {
-        // console.log('[MOCK] getEventTrends');
+        await simulateDelay();
         return MOCK_EVENT_TRENDS;
     },
 
     getResourceUtilization: async () => {
-        // console.log('[MOCK] getResourceUtilization');
+        await simulateDelay();
         return MOCK_RESOURCE_UTILIZATION;
     },
 
     getClubActivity: async () => {
-        // console.log('[MOCK] getClubActivity');
+        await simulateDelay();
         return MOCK_CLUB_ACTIVITY;
     },
 
     getClubs: async () => {
-        // console.log('[MOCK] getClubs');
-        return MOCK_CLUBS;
+        await simulateDelay();
+        return clubs;
     },
 
     joinClub: async (id: string) => {
-        console.log('[MOCK] joinClub', id);
+        await simulateDelay();
+        clubs = clubs.map(c => c.id === id ? { ...c, joined: true, members: c.members + 1 } : c);
         return { success: true };
     },
 
     leaveClub: async (id: string) => {
-        console.log('[MOCK] leaveClub', id);
+        await simulateDelay();
+        clubs = clubs.map(c => c.id === id ? { ...c, joined: false, members: Math.max(0, c.members - 1) } : c);
         return { success: true };
     },
 
     getBudgetSummary: async () => {
-        // console.log('[MOCK] getBudgetSummary');
+        await simulateDelay();
         return MOCK_BUDGET_SUMMARY;
     },
 
     exportData: async (type: 'events' | 'users' | 'bookings' | 'clubs') => {
-        console.log('[MOCK] exportData', type);
-        alert(`[MOCK] Exporting ${type} data...`);
+        await simulateDelay();
+        console.log(`[MockData] Exporting ${type}...`);
+        alert(`Exporting ${type} data (Mock)...`);
     }
 };
-
-export const api = import.meta.env.VITE_USE_MOCKS === 'true' ? MockApi : RealApi;
