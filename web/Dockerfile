@@ -9,6 +9,8 @@ RUN npm install
 
 # Build the application
 COPY . .
+ARG VITE_USE_MOCKS=false
+ENV VITE_USE_MOCKS=$VITE_USE_MOCKS
 RUN npm run build
 
 # Stage 2: Serve

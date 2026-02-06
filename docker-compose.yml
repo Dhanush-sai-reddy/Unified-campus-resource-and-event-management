@@ -72,6 +72,8 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
+      args:
+        - VITE_USE_MOCKS=${VITE_USE_MOCKS:-false}
     container_name: campus-web
     restart: unless-stopped
     ports:
