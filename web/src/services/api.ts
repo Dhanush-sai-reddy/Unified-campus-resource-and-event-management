@@ -107,6 +107,20 @@ const RealApi = {
         return response.json();
     },
 
+    login: async (email: string, password: string) => {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Invalid credentials');
+        }
+
+        return response.json();
+    },
+
     getAvailability: async (resourceId: string, start: string, end: string) => {
         const response = await fetch(`${API_BASE_URL}/resources/${resourceId}/availability?start=${start}&end=${end}`, {
             headers: getHeaders(),
@@ -329,6 +343,14 @@ const MockApi = {
     getBookings: async (_params?: any): Promise<Booking[]> => {
         // console.log('[MOCK] getBookings', params);
         return INITIAL_BOOKINGS;
+    },
+
+    login: async (email: string, _password: string) => {
+        console.log('[MOCK] login', email);
+        return {
+            user: MOCK_CURRENT_USER,
+            token: 'mock-token-123'
+        };
     },
 
     getAvailability: async (_resourceId: string, _start: string, _end: string) => {

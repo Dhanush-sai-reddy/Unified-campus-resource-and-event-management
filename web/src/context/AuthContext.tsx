@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User } from '../types';
 import { api } from '../services/api';
-import { API_BASE_URL } from '../config';
 
 interface AuthContextType {
     user: User | null;
@@ -18,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-     
+
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -35,17 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const login = async (email: string, password: string) => {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
+        // Use the api layer (which supports mocks) instead of direct fetch
+        const data = await api.login(email, password);
 
-        if (!response.ok) {
-            throw new Error('Invalid credentials');
-        }
-
-        const data = await response.json();
         localStorage.setItem('token', data.token);
         setUser(data.user);
         return data;
