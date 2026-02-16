@@ -18,19 +18,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
 
 
+
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            api.getCurrentUser()
-                .then(u => setUser(u))
-                .catch(() => {
-                    localStorage.removeItem('token');
-                    setUser(null);
-                })
-                .finally(() => setLoading(false));
-        } else {
-            setLoading(false);
-        }
+        const initAuth = async () => {
+             const token = localStorage.getItem('token');
+             if (token) {
+                 try {
+                     const u = await api.getCurrentUser();
+                     setUser(u);
+                 } catch (error) {
+                     console.error("Auth initialization failed:", error);
+                     localStorage.removeItem('token');
+                     setUser(null);
+                 } finally {
+                     setLoading(false);
+                 }
+             } else {
+                 setLoading(false);
+             }
+        };
+
+        initAuth();
     }, []);
 
     const login = async (email: string, password: string) => {

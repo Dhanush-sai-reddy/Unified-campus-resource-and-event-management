@@ -2,15 +2,28 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Event, Booking, Resource, EventStatus } from '../types';
 import { api } from '../services/api';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Clock, MapPin, X, Calendar as CalendarIcon, Server, Users, MessageCircle } from 'lucide-react';
-import CalendarGrid, { CalendarEvent } from '../components/CalendarGrid';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, MapPin, X, Calendar as CalendarIcon, Server, Users, MessageCircle, MoreVertical } from 'lucide-react';
+import ResourceCalendar from '../components/ResourceCalendar';
 import { useAuth } from '../context/AuthContext';
+import type { EventInput, DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core';
+
+interface SelectedEventInfo {
+    id: string;
+    title: string;
+    start: Date;
+    end: Date;
+    color: string;
+    location?: string;
+    resourceId?: string;
+    originalEvent?: Event;
+    originalBooking?: Booking;
+}
 
 export default function Calendar() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate] = useState(new Date());
     const [searchParams] = useSearchParams();
     const [viewMode, setViewMode] = useState<'events' | 'resources'>(
         (searchParams.get('view') as 'events' | 'resources') || 'events'
@@ -20,64 +33,158 @@ export default function Calendar() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [resources, setResources] = useState<Resource[]>([]);
     const [eventBookings, setEventBookings] = useState<Booking[]>([]);
+    const [selectedEvent, setSelectedEvent] = useState<SelectedEventInfo | null>(null);
 
-    const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+    // New Event Creation Modal State
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [createModalData, setCreateModalData] = useState<{ start: Date; end: Date } | null>(null);
+    const [newEventTitle, setNewEventTitle] = useState('');
+
+    const fetchData = async () => {
+        try {
+            const [fetchedEvents, fetchedBookings, fetchedResources] = await Promise.all([
+                api.getEvents('APPROVED,PENDING'),
+                api.getBookings({ upcoming: false }),
+                api.getResources()
+            ]);
+            setDbEvents(fetchedEvents);
+            setBookings(fetchedBookings);
+            setResources(fetchedResources);
+        } catch (error) {
+            console.error("Failed to fetch calendar data", error);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [fetchedEvents, fetchedBookings, fetchedResources] = await Promise.all([
-                    api.getEvents('APPROVED,PENDING'),
-                    api.getBookings({ upcoming: false }),
-                    api.getResources()
-                ]);
-                setDbEvents(fetchedEvents);
-                setBookings(fetchedBookings);
-                setResources(fetchedResources);
-            } catch (error) {
-                console.error("Failed to fetch calendar data", error);
-            }
-        };
         fetchData();
     }, []);
 
-    const getWeekDates = () => {
-        const start = new Date(currentDate);
-        start.setDate(start.getDate() - start.getDay());
-        return Array.from({ length: 7 }, (_, i) => {
-            const date = new Date(start);
-            date.setDate(start.getDate() + i);
-            return date;
+    const CALENDAR_COLORS = [
+        '#039be5', '#7986cb', '#33b679', '#f4511e', '#e67c73', '#0b8043',
+    ];
+
+    const calendarEvents: EventInput[] = viewMode === 'events'
+        ? dbEvents.map((event, i) => ({
+            id: event.id,
+            title: event.title,
+            start: event.date,
+            end: event.endDate || event.date,
+            backgroundColor: CALENDAR_COLORS[i % CALENDAR_COLORS.length],
+            borderColor: CALENDAR_COLORS[i % CALENDAR_COLORS.length],
+            textColor: '#ffffff',
+            extendedProps: { originalEvent: event },
+        }))
+        : bookings.map((booking, i) => {
+            const resource = resources.find(r => r.id === booking.resourceId);
+            return {
+                id: booking.id,
+                title: `${booking.title} — ${resource?.name || 'Unknown'}`,
+                start: booking.startTime,
+                end: booking.endTime,
+                backgroundColor: CALENDAR_COLORS[i % CALENDAR_COLORS.length],
+                borderColor: CALENDAR_COLORS[i % CALENDAR_COLORS.length],
+                textColor: '#ffffff',
+                extendedProps: { originalBooking: booking, resourceId: booking.resourceId },
+            };
         });
+
+    const handleSlotSelect = (info: DateSelectArg) => {
+        setCreateModalData({ start: info.start, end: info.end });
+        setNewEventTitle('');
+        setIsCreateModalOpen(true);
     };
 
-    const weekDates = getWeekDates();
+    const handleCreateEventSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!createModalData || !newEventTitle.trim()) return;
 
-    const navigateWeek = (direction: number) => {
-        const newDate = new Date(currentDate);
-        newDate.setDate(newDate.getDate() + direction * 7);
-        setCurrentDate(newDate);
+        try {
+            if (viewMode === 'events') {
+                await api.createEvent({
+                    title: newEventTitle,
+                    description: '',
+                    date: createModalData.start.toISOString(),
+                    endDate: createModalData.end.toISOString(),
+                    location: '',
+                    budget: 0,
+                });
+            } else {
+                // In resources view, we can't easily create a booking without selecting a resource first.
+                // Assuming for now it just redirects to the general create booking flow or alerts.
+                alert("Please switch to 'Events' view to create a general event, or go to the Resources page to book a specific resource.");
+            }
+            setIsCreateModalOpen(false);
+            setCreateModalData(null);
+            await fetchData();
+        } catch (err) {
+            console.error("Failed to create event", err);
+            alert('Failed to create event');
+        }
     };
 
-    const goToToday = () => setCurrentDate(new Date());
+    const handleEventClick = (info: EventClickArg) => {
+        const props = info.event.extendedProps;
+        const event = props.originalEvent as Event | undefined;
+        const booking = props.originalBooking as Booking | undefined;
 
-    const handleDeleteEvent = (id: string) => {
-        const updated = dbEvents.filter(e => e.id !== id);
-        setDbEvents(updated);
-        api.deleteEvent(id).then(() => {
+        setSelectedEvent({
+            id: info.event.id,
+            title: info.event.title,
+            start: info.event.start!,
+            end: info.event.end || info.event.start!,
+            color: info.event.backgroundColor || '#3b82f6',
+            location: event?.location || booking?.resource?.name,
+            resourceId: props.resourceId || event?.resourceId,
+            originalEvent: event,
+            originalBooking: booking,
+        });
+
+        if (viewMode === 'events' && event) {
+            const relatedBookings = bookings.filter(b => b.eventId === event.id);
+            setEventBookings(relatedBookings);
+        } else {
+            setEventBookings([]);
+        }
+    };
+
+    const handleEventDrop = async (info: EventDropArg) => {
+        try {
+            if (viewMode === 'events') {
+                const event = info.event.extendedProps.originalEvent as Event;
+                if (!event) return;
+                await api.updateEvent(event.id, {
+                    date: info.event.start!.toISOString(),
+                    endDate: (info.event.end || info.event.start!).toISOString(),
+                });
+            } else {
+                const booking = info.event.extendedProps.originalBooking as Booking;
+                if (!booking) return;
+                await api.updateBooking(booking.id, {
+                    startTime: info.event.start!.toISOString(),
+                    endTime: (info.event.end || info.event.start!).toISOString(),
+                });
+            }
+        } catch (err) {
+            console.error("Failed to update event", err);
+            info.revert();
+        }
+    };
+
+    const handleDeleteEvent = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this event?")) return;
+        try {
+            await api.deleteEvent(id);
             setDbEvents(prev => prev.filter(e => e.id !== id));
-        });
-        setSelectedEvent(null);
-    };
-
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            setSelectedEvent(null);
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete event');
+        }
     };
 
     const getResourceCapacityBar = (resourceId: string) => {
         const resource = resources.find(r => r.id === resourceId);
         if (!resource || !resource.capacity) return null;
-
         const percentage = Math.min((resource.capacity / 500) * 100, 100);
 
         return (
@@ -97,7 +204,7 @@ export default function Calendar() {
     };
 
     return (
-        <div className="space-y-6 relative">
+        <div className="space-y-6 relative h-full">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-display font-bold text-surface-900">Event Calendar</h1>
@@ -135,154 +242,150 @@ export default function Calendar() {
                             </span>
                         </button>
                     </div>
-
-                    <button
-                        onClick={goToToday}
-                        className="px-4 py-2 text-sm font-medium text-surface-700 bg-white border border-surface-200 rounded-xl hover:bg-surface-50 transition-colors"
-                    >
-                        Today
-                    </button>
-                    <div className="flex items-center bg-white border border-surface-200 rounded-xl overflow-hidden">
-                        <button onClick={() => navigateWeek(-1)} className="p-2 hover:bg-surface-50 transition-colors">
-                            <ChevronLeft size={20} />
-                        </button>
-                        <span className="px-4 py-2 text-sm font-medium text-surface-700 min-w-[200px] text-center">
-                            {formatDate(weekDates[0])} - {formatDate(weekDates[6])}
-                        </span>
-                        <button onClick={() => navigateWeek(1)} className="p-2 hover:bg-surface-50 transition-colors">
-                            <ChevronRight size={20} />
-                        </button>
-                    </div>
                 </div>
             </div>
 
-            <CalendarGrid
-                readOnly={user?.role === 'PARTICIPANT'}
-                viewMode={viewMode}
-                currentDate={currentDate}
-                events={dbEvents}
-                bookings={bookings}
-                resources={resources}
-                onEventCreate={async (data) => {
-                    const isMultiDay = data.startDate !== data.endDate;
-                    const start = new Date(data.startDate);
-                    start.setHours(data.startHour);
-                    const end = new Date(data.endDate);
-                    end.setHours(data.endHour);
-
-                    await api.createEvent({
-                        title: data.title,
-                        description: '',
-                        date: start.toISOString(),
-                        endDate: end.toISOString(),
-                        location: '',
-                        budget: 0,
-                        isMultiDay: isMultiDay as any,
-                        resourceId: data.resourceId
-                    });
-
-                    const [fetchedEvents, fetchedBookings] = await Promise.all([
-                        api.getEvents('APPROVED,PENDING'),
-                        api.getBookings({ upcoming: false })
-                    ]);
-                    setDbEvents(fetchedEvents);
-                    setBookings(fetchedBookings);
-                }}
-                onEventClick={(event) => {
-                    setSelectedEvent(event);
-                    if (viewMode === 'events') {
-                        const relatedBookings = bookings.filter(b => b.eventId === event.originalEvent?.id);
-                        setEventBookings(relatedBookings);
-                    } else {
-                        setEventBookings([]);
-                    }
-                }}
-                onEventUpdate={async (event) => {
-                    try {
-                        if (viewMode === 'events') {
-                            if (!event.originalEvent) return;
-
-                            const dayDate = weekDates[event.day];
-                            const start = new Date(dayDate);
-                            start.setHours(event.startHour, 0, 0, 0);
-
-                            const end = new Date(dayDate);
-                            end.setHours(event.endHour, 0, 0, 0);
-
-                            await api.updateEvent(event.originalEvent.id, {
-                                date: start.toISOString(),
-                                endDate: end.toISOString()
-                            });
-
-                            const [fetchedEvents] = await Promise.all([api.getEvents('APPROVED,PENDING')]);
-                            setDbEvents(fetchedEvents);
-                        } else {
-                            const resource = resources[event.day];
-                            if (!resource) return;
-
-                            const start = new Date(currentDate);
-                            start.setHours(event.startHour, 0, 0, 0);
-
-                            const end = new Date(currentDate);
-                            end.setHours(event.endHour, 0, 0, 0);
-
-                            await api.updateBooking(event.id, {
-                                startTime: start.toISOString(),
-                                endTime: end.toISOString(),
-                                resourceId: resource.id
-                            });
-
-                            const [fetchedBookings] = await Promise.all([api.getBookings({ upcoming: false })]);
-                            setBookings(fetchedBookings);
+            <div className="bg-white rounded-2xl shadow-sm border border-surface-100 p-0 overflow-hidden h-[75vh]">
+                <ResourceCalendar
+                    events={calendarEvents}
+                    initialDate={currentDate}
+                    onSlotSelect={user?.role !== 'PARTICIPANT' ? handleSlotSelect : undefined}
+                    onEventClick={handleEventClick}
+                    onEventDrop={handleEventDrop}
+                    onEventResize={async (info) => {
+                        try {
+                            if (viewMode === 'events') {
+                                const event = info.event.extendedProps.originalEvent as Event;
+                                if (!event) return;
+                                await api.updateEvent(event.id, {
+                                    date: info.event.start!.toISOString(),
+                                    endDate: (info.event.end || info.event.start!).toISOString(),
+                                });
+                            } else {
+                                const booking = info.event.extendedProps.originalBooking as Booking;
+                                if (!booking) return;
+                                await api.updateBooking(booking.id, {
+                                    startTime: info.event.start!.toISOString(),
+                                    endTime: (info.event.end || info.event.start!).toISOString(),
+                                });
+                            }
+                        } catch (err) {
+                            console.error("Failed to resize event", err);
+                            info.revert();
                         }
-                    } catch (err) {
-                        console.error("Failed to update event", err);
-                    }
-                }}
-            />
+                    }}
+                    readOnly={user?.role === 'PARTICIPANT'}
+                />
+            </div>
 
-            {selectedEvent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/30" onClick={() => setSelectedEvent(null)} />
-                    <motion.div
-                        initial={{ scale: 0.95, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
-                    >
-                        <div className={`${selectedEvent.color} p-4 text-white`}>
-                            <div className="flex justify-between items-start">
-                                <h3 className="text-lg font-bold">{selectedEvent.title}</h3>
-                                <button onClick={() => setSelectedEvent(null)} className="p-1 hover:bg-white/20 rounded">
+            {/* Create Event Modal */}
+            <AnimatePresence>
+                {isCreateModalOpen && createModalData && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsCreateModalOpen(false)}
+                            className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+                        >
+                            <div className="p-4 border-b border-surface-100 flex justify-between items-center bg-surface-50/50">
+                                <h3 className="font-bold text-surface-900">Create Event</h3>
+                                <button onClick={() => setIsCreateModalOpen(false)} className="p-1 hover:bg-surface-200 rounded text-surface-500">
                                     <X size={18} />
                                 </button>
                             </div>
-                        </div>
-                        <div className="p-4 space-y-3">
+                            <form onSubmit={handleCreateEventSubmit} className="p-5 space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-surface-500 uppercase mb-1.5 ml-1">Event Title</label>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="Add title"
+                                        value={newEventTitle}
+                                        onChange={(e) => setNewEventTitle(e.target.value)}
+                                        className="w-full px-4 py-3 text-lg font-medium rounded-xl border border-surface-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all placeholder:text-surface-400"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-surface-600 bg-surface-50 p-3 rounded-xl border border-surface-100">
+                                    <Clock size={16} className="text-primary-500" />
+                                    <span>
+                                        {createModalData.start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                        {' - '}
+                                        {createModalData.end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <div className="pt-2 flex justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCreateModalOpen(false)}
+                                        className="px-4 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50 rounded-xl transition-colors"
+                                    >
+                                        Discard
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={!newEventTitle.trim()}
+                                        className="px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-lg shadow-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    >
+                                        Save
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
-                            <div className="flex items-center gap-2 text-sm text-surface-600">
-                                <Clock size={16} />
+            {/* Event Detail Modal */}
+            {selectedEvent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-transparent" onClick={() => setSelectedEvent(null)} />
+                    <motion.div
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-surface-200"
+                    >
+                        <div className="absolute top-2 right-2 flex gap-1 z-10">
+                            <button onClick={() => setSelectedEvent(null)} className="p-1.5 bg-black/10 hover:bg-black/20 text-white rounded-full backdrop-blur-sm transition-colors">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="p-5 text-white relative overflow-hidden" style={{ backgroundColor: selectedEvent.color }}>
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/30 pointer-events-none" />
+                            <h3 className="text-xl font-bold relative z-10 pr-8 leading-tight">{selectedEvent.title}</h3>
+                            <div className="flex items-center gap-2 mt-2 relative z-10 text-white/90 text-sm font-medium">
+                                <Clock size={14} />
                                 <span>
-                                    {selectedEvent.startHour > 12 ? selectedEvent.startHour - 12 : selectedEvent.startHour}:00
-                                    {selectedEvent.startHour >= 12 ? ' PM' : ' AM'} -
-                                    {selectedEvent.endHour > 12 ? selectedEvent.endHour - 12 : selectedEvent.endHour}:00
-                                    {selectedEvent.endHour >= 12 ? ' PM' : ' AM'}
+                                    {selectedEvent.start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} -{' '}
+                                    {selectedEvent.end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                                 </span>
                             </div>
+                        </div>
+
+                        <div className="p-5 space-y-4">
                             {selectedEvent.location && (
-                                <div className="flex items-center gap-2 text-sm text-surface-600">
-                                    <MapPin size={16} />
-                                    <span>{selectedEvent.location}</span>
+                                <div className="flex items-center gap-3 text-surface-600">
+                                    <div className="p-2 bg-surface-50 rounded-lg text-surface-500">
+                                        <MapPin size={18} />
+                                    </div>
+                                    <span className="font-medium text-surface-900">{selectedEvent.location}</span>
                                 </div>
                             )}
 
                             {viewMode === 'resources' && selectedEvent.resourceId && (
                                 <div className="mt-4 pt-4 border-t border-surface-100">
-                                    <h4 className="text-xs font-semibold text-surface-500 uppercase mb-2 flex items-center gap-1">
+                                    <h4 className="text-xs font-semibold text-surface-500 uppercase mb-3 flex items-center gap-1.5">
                                         <Server size={12} /> Resource Details
                                     </h4>
-
-                                    <div className="bg-surface-50 p-2 rounded-lg border border-surface-200">
-                                        <p className="font-medium text-surface-900">{selectedEvent.location}</p>
+                                    <div className="bg-surface-50 p-3 rounded-xl border border-surface-200">
+                                        <p className="font-medium text-surface-900 mb-1">{selectedEvent.location}</p>
                                         {getResourceCapacityBar(selectedEvent.resourceId)}
                                     </div>
                                 </div>
@@ -290,51 +393,67 @@ export default function Calendar() {
 
                             {viewMode === 'events' && eventBookings.length > 0 && (
                                 <div className="mt-4 pt-4 border-t border-surface-100">
-                                    <h4 className="text-xs font-semibold text-surface-500 uppercase mb-2">Resource Allocations</h4>
+                                    <h4 className="text-xs font-semibold text-surface-500 uppercase mb-3 text-primary-600 font-bold tracking-wide">Allocated Resources</h4>
                                     <div className="space-y-2">
                                         {eventBookings.map(b => (
-                                            <div key={b.id} className="text-xs bg-surface-50 p-2 rounded-lg border border-surface-200">
-                                                <div className="flex justify-between font-medium text-surface-900">
-                                                    <span>{b.resource?.name}</span>
-                                                    <span>{new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <div key={b.id} className="text-sm bg-white p-3 rounded-xl border border-surface-200 shadow-sm flex items-start gap-3">
+                                                <div className="p-1.5 bg-primary-50 rounded-lg text-primary-600 mt-0.5">
+                                                    <Server size={16} />
                                                 </div>
-                                                <div className="text-surface-500 mt-0.5">{b.purpose}</div>
-                                                {b.resourceId && getResourceCapacityBar(b.resourceId)}
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between font-bold text-surface-900">
+                                                        <span>{b.resource?.name}</span>
+                                                    </div>
+                                                    <div className="text-surface-500 text-xs mt-1 flex items-center gap-1">
+                                                        <Clock size={10} />
+                                                        {new Date(b.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                                    </div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            <button
-                                onClick={() => {
-                                    const eventId = selectedEvent.originalEvent?.id;
-                                    if (eventId) {
-                                        navigate(`/chat?event=${eventId}&name=${encodeURIComponent(selectedEvent.title)}`);
-                                    }
-                                }}
-                                className="w-full mt-4 px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors flex items-center justify-center gap-2"
-                            >
-                                <MessageCircle size={16} />
-                                Join Event Chat
-                            </button>
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    onClick={() => {
+                                        const eventId = selectedEvent.originalEvent?.id;
+                                        if (eventId) {
+                                            navigate(`/chat?event=${eventId}&name=${encodeURIComponent(selectedEvent.title)}`);
+                                        }
+                                    }}
+                                    className="flex-1 px-4 py-2 text-sm font-bold text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <MessageCircle size={18} />
+                                    Chat
+                                </button>
+                                {selectedEvent.originalEvent && (
+                                    <button
+                                        onClick={() => handleDeleteEvent(selectedEvent.id)}
+                                        className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                                        title="Delete Event"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                )}
+                            </div>
 
                             {user?.role === 'ADMIN' && selectedEvent.originalEvent?.status === EventStatus.PENDING && (
-                                <div className="flex gap-2 mt-4">
+                                <div className="flex gap-2 mt-2 pt-4 border-t border-surface-100">
                                     <button
                                         onClick={async () => {
                                             try {
                                                 if (!selectedEvent.originalEvent) return;
                                                 await api.approveEvent(selectedEvent.originalEvent.id);
-                                                const [fetchedEvents] = await Promise.all([api.getEvents('APPROVED,PENDING')]);
-                                                setDbEvents(fetchedEvents);
+                                                await fetchData();
                                                 setSelectedEvent(null);
                                             } catch (err) {
                                                 console.error(err);
                                                 alert('Failed to approve event');
                                             }
                                         }}
-                                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors"
+                                        className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors shadow-lg shadow-green-500/20"
                                     >
                                         Approve
                                     </button>
@@ -345,27 +464,19 @@ export default function Calendar() {
                                             try {
                                                 if (!selectedEvent.originalEvent) return;
                                                 await api.rejectEvent(selectedEvent.originalEvent.id, reason);
-                                                const [fetchedEvents] = await Promise.all([api.getEvents('APPROVED,PENDING')]);
-                                                setDbEvents(fetchedEvents);
+                                                await fetchData();
                                                 setSelectedEvent(null);
                                             } catch (err) {
                                                 console.error(err);
                                                 alert('Failed to reject event');
                                             }
                                         }}
-                                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors"
+                                        className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-lg shadow-red-500/20"
                                     >
                                         Reject
                                     </button>
                                 </div>
                             )}
-
-                            <button
-                                onClick={() => handleDeleteEvent(selectedEvent.id)}
-                                className="w-full mt-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
-                            >
-                                Delete Event
-                            </button>
                         </div>
                     </motion.div>
                 </div>

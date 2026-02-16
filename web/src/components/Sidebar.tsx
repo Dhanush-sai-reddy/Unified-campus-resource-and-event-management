@@ -139,13 +139,14 @@ export default function Sidebar() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setMobileOpen(false)}
-                            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden"
                         />
                         <motion.aside
                             initial={{ x: -280 }}
                             animate={{ x: 0 }}
                             exit={{ x: -280 }}
-                            className="fixed inset-y-0 left-0 w-64 bg-white/95 backdrop-blur-xl border-r border-surface-200 z-50 md:hidden flex flex-col"
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed inset-y-0 left-0 w-64 bg-white/90 backdrop-blur-xl border-r border-surface-200 z-40 flex flex-col md:hidden"
                         >
                             <SidebarContent />
                         </motion.aside>
@@ -153,10 +154,8 @@ export default function Sidebar() {
                 )}
             </AnimatePresence>
 
-            { }
             <aside
-                className={`hidden md:flex fixed inset-y-0 left-0 bg-white/90 backdrop-blur-xl border-r border-surface-200 z-20 flex-col transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'
-                    }`}
+                className={`hidden md:flex fixed inset-y-0 left-0 bg-white/90 backdrop-blur-xl border-r border-surface-200 z-20 flex-col transition-all duration-300 w-64`}
             >
                 <SidebarContent />
             </aside>

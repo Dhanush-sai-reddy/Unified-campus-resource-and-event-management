@@ -3,18 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Resource, Booking } from '../types';
 import { useAuth } from '../context/AuthContext';
-import CalendarGrid from '../components/CalendarGrid';
+import ResourceCalendar from '../components/ResourceCalendar';
 import { ChevronLeft, Calendar as CalendarIcon, Clock, Trash2, Save, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { EventInput, DateSelectArg } from '@fullcalendar/core';
 
 interface DraftBooking {
     id: string;
     resourceId: string;
     resourceName: string;
-    startHour: number;
-    endHour: number;
-    startDate: string;
-    endDate: string;
+    start: string;
+    end: string;
 }
 
 export default function CreateEvent() {
@@ -24,23 +23,7 @@ export default function CreateEvent() {
     const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
     const [resourceBookings, setResourceBookings] = useState<Booking[]>([]);
 
-    const [viewDate, setViewDate] = useState(new Date());
-
-    const handlePrevWeek = () => {
-        const newDate = new Date(viewDate);
-        newDate.setDate(newDate.getDate() - 7);
-        setViewDate(newDate);
-    };
-
-    const handleNextWeek = () => {
-        const newDate = new Date(viewDate);
-        newDate.setDate(newDate.getDate() + 7);
-        setViewDate(newDate);
-    };
-
-
     const [draftBookings, setDraftBookings] = useState<DraftBooking[]>([]);
-
 
     const [eventTitle, setEventTitle] = useState('');
     const [eventDescription, setEventDescription] = useState('');
@@ -83,7 +66,7 @@ export default function CreateEvent() {
         fetchBookings();
     }, [selectedResourceId]);
 
-    const handleDragComplete = (data: { startHour: number, endHour: number, day: number, startDate: string, endDate: string }) => {
+    const handleSlotSelect = (info: DateSelectArg) => {
         const resource = resources.find(r => r.id === selectedResourceId);
         if (!resource || !selectedResourceId) return;
 
@@ -91,10 +74,8 @@ export default function CreateEvent() {
             id: `draft-${Date.now()}-${Math.random()}`,
             resourceId: selectedResourceId,
             resourceName: resource.name,
-            startHour: data.startHour,
-            endHour: data.endHour,
-            startDate: data.startDate,
-            endDate: data.endDate
+            start: info.start.toISOString(),
+            end: info.end.toISOString(),
         };
 
         setDraftBookings(prev => [...prev, newDraft]);
@@ -117,19 +98,13 @@ export default function CreateEvent() {
 
         setIsSubmitting(true);
         try {
-
             const primary = draftBookings[0];
-            const start = new Date(`${primary.startDate}T00:00:00`);
-            start.setHours(primary.startHour, 0, 0, 0);
-
-            const end = new Date(`${primary.endDate}T00:00:00`);
-            end.setHours(primary.endHour, 0, 0, 0);
 
             const newEvent = await api.createEvent({
                 title: eventTitle,
                 description: eventDescription || `Event dealing with ${draftBookings.length} resources`,
-                date: start.toISOString(),
-                endDate: end.toISOString(),
+                date: primary.start,
+                endDate: primary.end,
                 location: primary.resourceName,
                 resourceId: primary.resourceId,
                 budget: eventBudget,
@@ -140,19 +115,11 @@ export default function CreateEvent() {
             const additionalDrafts = draftBookings.slice(1);
 
             await Promise.all(additionalDrafts.map(draft => {
-                const [year, month, day] = draft.startDate.split('-').map(Number);
-
-                const bStart = new Date(year, month - 1, day);
-                bStart.setHours(draft.startHour, 0, 0, 0);
-
-                const bEnd = new Date(year, month - 1, day);
-                bEnd.setHours(draft.endHour, 0, 0, 0);
-
                 return api.createBooking(draft.resourceId, {
                     title: eventTitle,
                     eventId: newEvent.id,
-                    startTime: bStart.toISOString(),
-                    endTime: bEnd.toISOString(),
+                    startTime: draft.start,
+                    endTime: draft.end,
                     purpose: eventDescription
                 });
             }));
@@ -162,7 +129,6 @@ export default function CreateEvent() {
             console.error("Failed to create event", err);
             const errorMessage = err.response?.data?.error || err.message || "Failed to create event.";
 
-             
             if (errorMessage.includes("conflicts") && draftBookings.length > 1) {
                 alert("Event created, but some additional resource bookings failed due to conflicts. Please check your schedule.");
                 navigate('/calendar');
@@ -175,40 +141,26 @@ export default function CreateEvent() {
 
     const selectedResource = resources.find(r => r.id === selectedResourceId);
 
-
-    const displayEvents = [
+    // Build FullCalendar events: existing bookings (gray) + draft bookings (primary blue)
+    const calendarEvents: EventInput[] = [
         ...resourceBookings.map(b => ({
             id: b.id,
             title: b.title,
-            date: b.startTime,
-            endDate: b.endTime,
-            day: 0,
-            endHour: 0,
-            color: 'bg-slate-500',
-            location: b.resource?.name || '',
-            resourceId: b.resourceId
+            start: b.startTime,
+            end: b.endTime,
+            backgroundColor: '#64748b',
+            borderColor: '#64748b',
         })),
         ...draftBookings
             .filter(d => d.resourceId === selectedResourceId)
             .map(d => ({
                 id: d.id,
                 title: 'NEW',
-                date: (() => {
-                    const date = new Date(`${d.startDate}T00:00:00`);
-                    date.setHours(d.startHour, 0, 0, 0);
-                    return date.toISOString();
-                })(),
-                endDate: (() => {
-                    const date = new Date(`${d.endDate}T00:00:00`);
-                    date.setHours(d.endHour, 0, 0, 0);
-                    return date.toISOString();
-                })(),
-                day: 0,
-                endHour: 0,
-                color: 'bg-primary-500',
-                location: d.resourceName,
-                resourceId: d.resourceId
-            }))
+                start: d.start,
+                end: d.end,
+                backgroundColor: '#7c3aed',
+                borderColor: '#7c3aed',
+            })),
     ];
 
     return (
@@ -224,9 +176,7 @@ export default function CreateEvent() {
                 </div>
             </div>
 
-
             <div className="flex-1 flex gap-6 overflow-hidden">
-
 
                 <div className="flex-1 flex flex-col gap-4 overflow-hidden">
 
@@ -256,33 +206,18 @@ export default function CreateEvent() {
                         </div>
                     </div>
 
-
                     {selectedResourceId ? (
                         <div className="flex-1 bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden flex flex-col">
                             <div className="p-4 border-b border-surface-100 flex items-center justify-between">
                                 <h3 className="text-lg font-semibold text-surface-900">Availability for {selectedResource?.name}</h3>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={handlePrevWeek} className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-surface-600">
-                                        <ChevronLeft size={20} />
-                                    </button>
-                                    <span className="text-sm font-medium text-surface-700 min-w-[100px] text-center">
-                                        {viewDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
-                                    </span>
-                                    <button onClick={handleNextWeek} className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-surface-600">
-                                        <ChevronLeft size={20} className="rotate-180" />
-                                    </button>
-                                </div>
                             </div>
-                            <div className="flex-1 overflow-auto">
-                                <CalendarGrid
+                            <div className="flex-1 overflow-auto p-2">
+                                <ResourceCalendar
                                     key={selectedResourceId}
-                                    viewMode="events"
-                                    disableQuickAdd={true}
-                                    currentDate={viewDate}
-                                    events={displayEvents as any}
-                                    bookings={[]}
-                                    resources={[]}
-                                    onEventCreate={async (data) => handleDragComplete(data as any)}
+                                    events={calendarEvents}
+                                    initialDate={new Date()}
+                                    onSlotSelect={handleSlotSelect}
+                                    height="100%"
                                 />
                             </div>
                         </div>
@@ -293,7 +228,7 @@ export default function CreateEvent() {
                     )}
                 </div>
 
-
+                {/* Right Sidebar: Event Details */}
                 <div className="w-96 flex-shrink-0 bg-white rounded-2xl shadow-lg border border-surface-200 flex flex-col overflow-hidden h-[95%] self-center">
                     <div className="p-5 border-b border-surface-100 bg-surface-50/50">
                         <h2 className="text-lg font-bold text-surface-900 flex items-center gap-2">
@@ -303,7 +238,6 @@ export default function CreateEvent() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-5 space-y-6">
-
 
                         <div>
                             <label className="block text-sm font-medium text-surface-700 mb-1.5">Event Name</label>
@@ -349,7 +283,6 @@ export default function CreateEvent() {
                             </div>
                         </div>
 
-
                         <div>
                             <label className="block text-sm font-medium text-surface-700 mb-1.5">Description (Optional)</label>
                             <textarea
@@ -360,7 +293,6 @@ export default function CreateEvent() {
                                 className="w-full px-4 py-2.5 rounded-xl border border-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none resize-none transition-all"
                             />
                         </div>
-
 
                         <div>
                             <div className="flex items-center justify-between mb-2">
@@ -394,11 +326,14 @@ export default function CreateEvent() {
                                                 </div>
                                                 <div className="flex items-center gap-2 text-xs text-surface-600">
                                                     <CalendarIcon size={12} />
-                                                    <span>{new Date(draft.startDate).toLocaleDateString()}</span>
+                                                    <span>{new Date(draft.start).toLocaleDateString()}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-xs text-surface-600">
                                                     <Clock size={12} />
-                                                    <span>{draft.startHour}:00 - {draft.endHour}:00</span>
+                                                    <span>
+                                                        {new Date(draft.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
+                                                        {new Date(draft.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
                                                 </div>
                                             </motion.div>
                                         ))}

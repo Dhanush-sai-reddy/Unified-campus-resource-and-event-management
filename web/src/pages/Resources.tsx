@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Resource, ResourceType, Booking, Event, EventStatus, UserRole } from '../types';
+import { Resource, ResourceType, Booking, Event, UserRole } from '../types';
 import { api } from '../services/api';
-import { Monitor, Square, Search, X, Users, Grid, List, Filter, ChevronLeft, ChevronRight, CalendarDays, Plus, Trash2, Calendar, MapPin, Clock } from 'lucide-react';
+import { Monitor, Square, Search, X, Users, Grid, List, Filter, Calendar, Plus, Trash2, MapPin, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import ResourceTimeline from '../components/ResourceTimeline';
-import CalendarGrid from '../components/CalendarGrid';
+import ResourceCalendar from '../components/ResourceCalendar';
+import type { EventInput, DateSelectArg } from '@fullcalendar/core';
 
 type ViewMode = 'grid' | 'list' | 'timeline' | 'calendar';
 type CategoryFilter = 'all' | 'rooms' | 'equipment' | 'labs' | 'vehicles';
@@ -27,131 +28,6 @@ const EQUIPMENT_CATEGORIES = [
     { key: 'event', label: 'Event Setup', pattern: /stage|backdrop|desk|banner/i },
 ];
 
-const TIME_SLOTS = [
-    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
-];
-
-function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect: (date: Date) => void }) {
-    const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
-
-    const getDaysInMonth = (date: Date) => {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const days: (Date | null)[] = [];
-
-        for (let i = 0; i < firstDay.getDay(); i++) {
-            days.push(null);
-        }
-
-        for (let i = 1; i <= lastDay.getDate(); i++) {
-            days.push(new Date(year, month, i));
-        }
-
-        return days;
-    };
-
-    const days = getDaysInMonth(currentMonth);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const isSelected = (date: Date) => {
-        return date.toDateString() === selectedDate.toDateString();
-    };
-
-    const isToday = (date: Date) => {
-        return date.toDateString() === today.toDateString();
-    };
-
-    const isPast = (date: Date) => {
-        return date < today;
-    };
-
-    const navigateMonth = (direction: number) => {
-        const newMonth = new Date(currentMonth);
-        newMonth.setMonth(newMonth.getMonth() + direction);
-        setCurrentMonth(newMonth);
-    };
-
-    return (
-        <div className="bg-surface-50 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-4">
-                <button
-                    onClick={() => navigateMonth(-1)}
-                    className="p-1.5 rounded-lg hover:bg-surface-200 text-surface-600 transition-colors"
-                >
-                    <ChevronLeft size={18} />
-                </button>
-                <span className="font-medium text-surface-900">
-                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </span>
-                <button
-                    onClick={() => navigateMonth(1)}
-                    className="p-1.5 rounded-lg hover:bg-surface-200 text-surface-600 transition-colors"
-                >
-                    <ChevronRight size={18} />
-                </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 mb-2">
-                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                    <div key={day} className="text-center text-xs font-medium text-surface-500 py-1">
-                        {day}
-                    </div>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-                {days.map((date, i) => (
-                    <div key={i} className="aspect-square">
-                        {date ? (
-                            <button
-                                onClick={() => !isPast(date) && onSelect(date)}
-                                disabled={isPast(date)}
-                                className={`w-full h-full rounded-lg text-sm font-medium transition-all ${isSelected(date)
-                                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/25'
-                                    : isToday(date)
-                                        ? 'bg-primary-100 text-primary-700'
-                                        : isPast(date)
-                                            ? 'text-surface-300 cursor-not-allowed'
-                                            : 'text-surface-700 hover:bg-surface-200'
-                                    }`}
-                            >
-                                {date.getDate()}
-                            </button>
-                        ) : null}
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-function TimeSlotSelector({ label, value, onChange }: { label: string; value: string; onChange: (time: string) => void }) {
-    return (
-        <div>
-            <label className="block text-sm font-medium text-surface-700 mb-2">{label}</label>
-            <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto p-1">
-                {TIME_SLOTS.map(time => (
-                    <button
-                        key={time}
-                        type="button"
-                        onClick={() => onChange(time)}
-                        className={`py-2 rounded-lg text-sm font-medium transition-all ${value === time
-                            ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/25'
-                            : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
-                            }`}
-                    >
-                        {time}
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 export default function Resources() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -164,8 +40,7 @@ export default function Resources() {
 
     const [resources, setResources] = useState<Resource[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
-    const [events, setEvents] = useState<Event[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [_events, setEvents] = useState<Event[]>([]);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newResource, setNewResource] = useState<Partial<Resource>>({
         name: '',
@@ -178,18 +53,16 @@ export default function Resources() {
     });
     const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-    const [eventName, setEventName] = useState('');
-    const [selectedEventId, setSelectedEventId] = useState<string>('');
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const [startTime, setStartTime] = useState('09:00');
-    const [endTime, setEndTime] = useState('10:00');
-    const [modalDate, setModalDate] = useState(new Date());
+    // Booking Creation Modal State
+    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+    const [bookingModalData, setBookingModalData] = useState<{ start: Date; end: Date } | null>(null);
+    const [newBookingTitle, setNewBookingTitle] = useState('');
+    const [newBookingPurpose, setNewBookingPurpose] = useState('');
 
     const fetchData = async () => {
         setLoading(true);
@@ -211,50 +84,6 @@ export default function Resources() {
     useEffect(() => {
         fetchData();
     }, []);
-
-
-
-    const navigateWeek = (direction: number) => {
-        const newDate = new Date(modalDate);
-        newDate.setDate(newDate.getDate() + (direction * 7));
-        setModalDate(newDate);
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedResource || !user) return;
-
-        setError(null);
-
-        if (startTime >= endTime) {
-            setError('End time must be after start time');
-            return;
-        }
-
-        try {
-            const start = new Date(selectedDate);
-            const [startHour, startMin] = startTime.split(':').map(Number);
-            start.setHours(startHour, startMin, 0, 0);
-
-            const end = new Date(selectedDate);
-            const [endHour, endMin] = endTime.split(':').map(Number);
-            end.setHours(endHour, endMin, 0, 0);
-
-            await api.createBooking(selectedResource.id, {
-                title: eventName,
-                purpose: eventName,
-                eventId: selectedEventId || undefined,
-                startTime: start.toISOString(),
-                endTime: end.toISOString(),
-            });
-            setIsModalOpen(false);
-            setEventName('');
-            setSelectedEventId('');
-            fetchData();
-        } catch (err: any) {
-            setError(err.message || "Failed to book resource");
-        }
-    };
 
     const handleAddResource = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -294,6 +123,34 @@ export default function Resources() {
         }
     };
 
+    const handleSlotSelect = (info: DateSelectArg) => {
+        if (!selectedResource) return;
+        setBookingModalData({ start: info.start, end: info.end });
+        setNewBookingTitle('');
+        setNewBookingPurpose('');
+        setIsBookingModalOpen(true);
+    };
+
+    const handleBookingSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedResource || !bookingModalData || !newBookingTitle.trim()) return;
+
+        try {
+            await api.createBooking(selectedResource.id, {
+                title: newBookingTitle,
+                purpose: newBookingPurpose || newBookingTitle,
+                startTime: bookingModalData.start.toISOString(),
+                endTime: bookingModalData.end.toISOString(),
+            });
+            setIsBookingModalOpen(false);
+            setBookingModalData(null);
+            await fetchData();
+        } catch (err: any) {
+            console.error("Failed to book:", err);
+            alert(err.message || "Failed to book resource. Please try again.");
+        }
+    };
+
     const filteredResources = resources.filter(resource => {
         const matchesCategory =
             categoryFilter === 'all' ||
@@ -325,6 +182,24 @@ export default function Resources() {
         show: { y: 0, opacity: 1 }
     };
 
+    // Build FullCalendar events for the selected resource
+    // Use slightly different colors for resources to distinguish from events
+    const RESOURCE_COLORS = ['#ea4335', '#FBBC04', '#34A853', '#4285F4', '#9334E6'];
+
+    const calendarEvents: EventInput[] = selectedResource
+        ? bookings
+            .filter(b => b.resourceId === selectedResource.id)
+            .map((b, i) => ({
+                id: b.id,
+                title: b.title,
+                start: b.startTime,
+                end: b.endTime,
+                backgroundColor: RESOURCE_COLORS[i % RESOURCE_COLORS.length],
+                borderColor: RESOURCE_COLORS[i % RESOURCE_COLORS.length],
+                textColor: '#ffffff',
+            }))
+        : [];
+
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -333,7 +208,7 @@ export default function Resources() {
                         <div className="p-2 rounded-lg bg-blue-50 text-blue-600"><Square size={20} /></div>
                         <div>
                             <p className="text-2xl font-bold text-surface-900">{totalRooms}</p>
-                            <p className="text-xs text-surface-500">Rooms (v2)</p>
+                            <p className="text-xs text-surface-500">Rooms</p>
                         </div>
                     </div>
                 </motion.div>
@@ -408,9 +283,6 @@ export default function Resources() {
                             <List size={18} />
                         </button>
                         <button onClick={() => setViewMode('timeline')} className={`p-2.5 ${viewMode === 'timeline' ? 'bg-primary-50 text-primary-600' : 'text-surface-500 hover:bg-surface-50'}`} title="Timeline View">
-                            <CalendarDays size={18} />
-                        </button>
-                        <button onClick={() => setViewMode('calendar')} className={`p-2.5 ${viewMode === 'calendar' ? 'bg-primary-50 text-primary-600' : 'text-surface-500 hover:bg-surface-50'}`} title="Calendar View">
                             <Calendar size={18} />
                         </button>
                     </div>
@@ -450,27 +322,6 @@ export default function Resources() {
                     onBookClick={(_) => {
                     }}
                 />
-            ) : viewMode === 'calendar' ? (
-                <div className="h-[800px]">
-                    <CalendarGrid
-                        viewMode="resources"
-                        currentDate={new Date()}
-                        events={[]}
-                        bookings={bookings}
-                        resources={filteredResources}
-                        onEventCreate={async (data) => {
-                            const resource = resources.find(r => r.id === data.resourceId);
-                            if (resource) {
-                                setSelectedResource(resource);
-                                setIsModalOpen(true);
-                                setSelectedDate(new Date(data.startDate));
-                                setStartTime(`${data.startHour.toString().padStart(2, '0')}:00`);
-                                setEndTime(`${data.endHour.toString().padStart(2, '0')}:00`);
-                            }
-                        }}
-                        disableQuickAdd={true}
-                    />
-                </div>
             ) : (
                 <motion.div
                     variants={container}
@@ -519,10 +370,7 @@ export default function Resources() {
                                     <div className="flex gap-2 w-full">
                                         {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
                                             <button
-                                                onClick={() => {
-                                                    setSelectedResource(resource);
-                                                    setViewMode('calendar');
-                                                }}
+                                                onClick={() => setSelectedResource(resource)}
                                                 disabled={!resource.isAvailable}
                                                 className="flex-1 py-2.5 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-surface-900 text-white hover:bg-surface-800"
                                             >
@@ -530,10 +378,7 @@ export default function Resources() {
                                             </button>
                                         )}
                                         <button
-                                            onClick={() => {
-                                                setSelectedResource(resource);
-                                                setViewMode('calendar');
-                                            }}
+                                            onClick={() => setSelectedResource(resource)}
                                             className="px-3 py-2.5 rounded-xl border border-surface-200 text-surface-600 hover:bg-surface-50 transition-colors"
                                             title="View Schedule"
                                         >
@@ -565,20 +410,14 @@ export default function Resources() {
                                     )}
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => {
-                                                setSelectedResource(resource);
-                                                setViewMode('calendar');
-                                            }}
+                                            onClick={() => setSelectedResource(resource)}
                                             className="p-2 text-surface-600 hover:bg-surface-50 rounded-lg transition-colors border border-surface-200"
                                             title="View Schedule"
                                         >
                                             <Calendar size={18} />
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                setSelectedResource(resource);
-                                                setViewMode('calendar');
-                                            }}
+                                            onClick={() => setSelectedResource(resource)}
                                             disabled={!resource.isAvailable}
                                             className="px-4 py-2 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-primary-600 text-white hover:bg-primary-700"
                                         >
@@ -609,17 +448,15 @@ export default function Resources() {
                 )
             }
 
+            {/* Resource Calendar Modal — FullCalendar */}
             <AnimatePresence>
-                {selectedResource && viewMode === 'calendar' && (
+                {selectedResource && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => {
-                                setSelectedResource(null);
-                                setViewMode('grid');
-                            }}
+                            onClick={() => setSelectedResource(null)}
                             className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm"
                         />
                         <motion.div
@@ -642,22 +479,7 @@ export default function Resources() {
                                     </div>
                                     <h3 className="text-xl font-bold text-surface-900">
                                         Availability for {selectedResource.name}
-                                        Availability for {selectedResource.name}
                                     </h3>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <button onClick={() => navigateWeek(-1)} className="p-1 hover:bg-surface-100 rounded">
-                                            <ChevronLeft size={20} />
-                                        </button>
-                                        <span className="font-medium">
-                                            {modalDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                                        </span>
-                                        <button onClick={() => navigateWeek(1)} className="p-1 hover:bg-surface-100 rounded">
-                                            <ChevronRight size={20} />
-                                        </button>
-                                        <button onClick={() => setModalDate(new Date())} className="text-xs px-2 py-1 bg-surface-100 rounded hover:bg-surface-200">
-                                            Today
-                                        </button>
-                                    </div>
                                 </div>
                                 <div className="flex gap-2 items-center">
                                     {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
@@ -666,10 +488,7 @@ export default function Resources() {
                                         </p>
                                     )}
                                     <button
-                                        onClick={() => {
-                                            setSelectedResource(null);
-                                            setViewMode('grid');
-                                        }}
+                                        onClick={() => setSelectedResource(null)}
                                         className="p-2 text-surface-400 hover:text-surface-600 rounded-lg hover:bg-surface-50"
                                     >
                                         <X size={20} />
@@ -678,56 +497,12 @@ export default function Resources() {
                             </div>
 
                             <div className="flex-1 overflow-hidden p-6 bg-surface-50/30">
-                                <CalendarGrid
-                                    viewMode="events"
-                                    currentDate={modalDate}
-                                    events={bookings
-                                        .filter(b => b.resourceId === selectedResource.id)
-                                        .map(b => ({
-                                            id: b.id,
-                                            title: b.title,
-                                            description: b.purpose || '',
-                                            date: b.startTime,
-                                            endDate: b.endTime,
-                                            resourceId: b.resourceId,
-                                            location: b.resource?.name || '',
-                                            budget: 0,
-                                            status: EventStatus.APPROVED,
-                                            isMultiDay: false,
-                                            organizerId: b.userId,
-                                            organizerName: b.user?.name || 'Unknown',
-                                            clubName: 'Resource Booking',
-                                            participants: 0
-                                        }))}
-                                    bookings={[]}
-                                    resources={[]}
-                                    onEventCreate={async (data) => {
-                                        if (!selectedResource || !data.title) return;
-                                        try {
-                                            const [year, month, day] = data.startDate.split('-').map(Number);
-
-                                            const date = new Date(year, month - 1, day);
-                                            date.setHours(data.startHour, 0, 0, 0);
-                                            const startStr = date.toISOString();
-
-                                            const endDate = new Date(year, month - 1, day);
-                                            endDate.setHours(data.endHour, 0, 0, 0);
-                                            const endStr = endDate.toISOString();
-
-                                            await api.createBooking(selectedResource.id, {
-                                                title: data.title,
-                                                purpose: data.title,
-                                                startTime: startStr,
-                                                endTime: endStr,
-                                            });
-                                            fetchData();
-                                        } catch (err: any) {
-                                            console.error("Failed to book:", err);
-                                            alert(err.message || "Failed to book resource. Please try again.");
-                                        }
-                                    }}
-                                    disableQuickAdd={false}
-                                    readOnly={false}
+                                <ResourceCalendar
+                                    events={calendarEvents}
+                                    initialDate={new Date()}
+                                    onSlotSelect={(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') ? handleSlotSelect : undefined}
+                                    readOnly={user?.role === 'PARTICIPANT'}
+                                    height="100%"
                                 />
                             </div>
                         </motion.div>
@@ -735,103 +510,74 @@ export default function Resources() {
                 )}
             </AnimatePresence>
 
+            {/* Create Booking Modal (Inside Resource Calendar) */}
             <AnimatePresence>
-                {isModalOpen && selectedResource && (
+                {isBookingModalOpen && bookingModalData && selectedResource && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setIsModalOpen(false)}
+                            onClick={() => setIsBookingModalOpen(false)}
                             className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm"
                         />
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
+                            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
                         >
-                            <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
-                                <div>
-                                    <h3 className="text-lg font-bold text-surface-900">
-                                        {user?.role === 'ADMIN' ? 'Book Resource' : 'Request Resource'}
-                                    </h3>
-                                    <p className="text-sm text-surface-500">{selectedResource.name}</p>
-                                </div>
-                                <button onClick={() => setIsModalOpen(false)} className="p-2 text-surface-400 hover:text-surface-600 rounded-lg hover:bg-surface-100">
-                                    <X size={20} />
+                            <div className="p-4 border-b border-surface-100 flex justify-between items-center bg-surface-50/50">
+                                <h3 className="font-bold text-surface-900">Book {selectedResource.name}</h3>
+                                <button onClick={() => setIsBookingModalOpen(false)} className="p-1 hover:bg-surface-200 rounded text-surface-500">
+                                    <X size={18} />
                                 </button>
                             </div>
-
-                            <form onSubmit={handleSubmit} className="p-6">
-                                {error && (
-                                    <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
-                                        {error}
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-surface-700 mb-2">Select Date</label>
-                                        <MiniCalendar selectedDate={selectedDate} onSelect={setSelectedDate} />
-                                        <p className="mt-3 text-sm text-surface-600 flex items-center gap-2">
-                                            Selected: {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-5">
-                                        <div>
-                                            <label className="block text-sm font-medium text-surface-700 mb-2">Parent Event (Optional)</label>
-                                            <select
-                                                value={selectedEventId}
-                                                onChange={(e) => setSelectedEventId(e.target.value)}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 mb-4"
-                                            >
-                                                <option value="">-- No Parent Event --</option>
-                                                {events.map(event => (
-                                                    <option key={event.id} value={event.id}>
-                                                        {event.title}
-                                                    </option>
-                                                ))}
-                                            </select>
-
-                                            <label className="block text-sm font-medium text-surface-700 mb-2">Booking Title / Sub-event</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={eventName}
-                                                onChange={(e) => setEventName(e.target.value)}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10"
-                                                placeholder="e.g. Workshop Session 1"
-                                            />
-                                        </div>
-
-                                        <TimeSlotSelector label="Start Time" value={startTime} onChange={setStartTime} />
-                                        <TimeSlotSelector label="End Time" value={endTime} onChange={setEndTime} />
-                                    </div>
+                            <form onSubmit={handleBookingSubmit} className="p-5 space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-surface-500 uppercase mb-1.5 ml-1">Event Title</label>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="Add title"
+                                        value={newBookingTitle}
+                                        onChange={(e) => setNewBookingTitle(e.target.value)}
+                                        className="w-full px-4 py-3 text-lg font-medium rounded-xl border border-surface-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all placeholder:text-surface-400"
+                                    />
                                 </div>
-
-                                <div className="flex justify-between items-center gap-3 mt-6 pt-4 border-t border-surface-100">
-                                    {selectedResource?.requiresApproval && user?.role !== 'ADMIN' && (
-                                        <p className="text-xs text-surface-500 flex-1 flex items-center gap-1">
-                                            <Clock size={14} /> This resource requires admin approval
-                                        </p>
-                                    )}
-                                    <div className="flex gap-3 ml-auto">
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsModalOpen(false)}
-                                            className="px-5 py-2.5 text-sm font-medium text-surface-600 bg-white border border-surface-200 rounded-xl hover:bg-surface-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            className="px-5 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 shadow-lg shadow-primary-500/25"
-                                        >
-                                            {user?.role === 'ADMIN' ? 'Book Resource' : 'Request Resource'}
-                                        </button>
-                                    </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-surface-500 uppercase mb-1.5 ml-1">Purpose / Description</label>
+                                    <textarea
+                                        placeholder="Optional description"
+                                        value={newBookingPurpose}
+                                        onChange={(e) => setNewBookingPurpose(e.target.value)}
+                                        className="w-full px-4 py-2 text-sm rounded-xl border border-surface-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all placeholder:text-surface-400 resize-none"
+                                        rows={2}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-surface-600 bg-surface-50 p-3 rounded-xl border border-surface-100">
+                                    <Clock size={16} className="text-primary-500" />
+                                    <span>
+                                        {bookingModalData.start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                        {' - '}
+                                        {bookingModalData.end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <div className="pt-2 flex justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsBookingModalOpen(false)}
+                                        className="px-4 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50 rounded-xl transition-colors"
+                                    >
+                                        Discard
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={!newBookingTitle.trim()}
+                                        className="px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-lg shadow-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    >
+                                        Book
+                                    </button>
                                 </div>
                             </form>
                         </motion.div>
@@ -839,6 +585,7 @@ export default function Resources() {
                 )}
             </AnimatePresence>
 
+            {/* Add Resource Modal */}
             <AnimatePresence>
                 {isAddModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

@@ -10,7 +10,7 @@ import { Notification } from '../types';
 const pageTitles: Record<string, string> = {
     '/': 'Dashboard',
     '/events': 'Events',
-     
+
     '/clubs': 'Clubs',
     '/profile': 'Profile',
     '/analytics': 'Analytics',
@@ -37,7 +37,8 @@ export default function Layout() {
         };
         fetchNotifications();
 
-         
+
+
         const interval = setInterval(fetchNotifications, 60000);
         return () => clearInterval(interval);
     }, []);

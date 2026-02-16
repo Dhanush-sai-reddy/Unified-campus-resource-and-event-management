@@ -60,11 +60,22 @@ function AppRoutes() {
     );
 }
 
+
+function AppContent() {
+    const { loading } = useAuth();
+
+    if (loading) {
+        return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    }
+
+    return <AppRoutes />;
+}
+
 export default function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <AppRoutes />
+                <AppContent />
             </AuthProvider>
         </BrowserRouter>
     );
