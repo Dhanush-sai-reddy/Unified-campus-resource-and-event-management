@@ -1,65 +1,24 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
-
-# Testing
-coverage/
-
-# Production
-build/
-dist/
-
-# Misc
-.DS_Store
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
 # Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-logs/
-*.log
+pnpm-debug.log*
+lerna-debug.log*
 
-# IDEs
-.idea/
-.vscode/
-*.swp
-*.swo
+node_modules
+dist
+dist-ssr
+*.local
 
-# OS
-Thumbs.db
-
-# Python
-__pycache__/
-*.pyc
-venv/
-
-# Docker
-docker-data/
-
-# Temporary Scripts & Data
-build_log.txt
-hash.txt
-verify_creation.js
-verify_system.ps1
-fix_db.sql
-truncate_events.sql
-populate_resources.sql
-init_node_db.sql
-seed_data.sql
-start_local.bat
-
-# Go
-bin/
-*.exe
-*.test
-scheduler/scheduler
-
-
-# Audit Logs
-audit-logs/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

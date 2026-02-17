@@ -1,6 +1,0 @@
-
-> campus-system-web@0.1.0 build
-> tsc && vite build
-
-src/pages/Analytics.tsx(3,128): error TS2307: Cannot find module 'recharts' or its corresponding type declarations.
-src/pages/Resources.tsx(4,27): error TS6133: 'MapPin' is declared but its value is never read.
